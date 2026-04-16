@@ -1,1 +1,0 @@
-This file serves zero purpose and solely exists to let us have the src folder as a thing to put all the code in
