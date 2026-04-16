@@ -77,3 +77,14 @@ CREATE TABLE circuits(
 
     FOREIGN KEY (lap_record_driver_id) REFERENCES drivers(id) ON DELETE CASCADE
 );
+
+-- Represent current driver standings
+CREATE TABLE driver_standings(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    season_id INT NOT NULL,
+    driver_id INT NOT NULL,
+    points INT NOT NULL DEFAULT 0,
+    wins INT NOT NULL DEFAULT 0,
+    podiums INT NOT NULL DEFAULT 0,
+    position INT NOT NULL
+);
