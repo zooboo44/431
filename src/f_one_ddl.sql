@@ -16,6 +16,7 @@ CREATE TABLE teams(
     power_unit VARCHAR(100) NOT NULL,
     total_points INT UNSIGNED NOT NULL DEFAULT 0,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
 );
 
@@ -30,4 +31,21 @@ CREATE TABLE users(
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+);
+
+-- Represent each individual driver
+CREATE TABLE drivers(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    team_id INT UNSIGNED NOT NULL,
+    season_id INT UNSIGNED NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    nationality VARCHAR(50) NOT NULL,
+    racing_number INT NOT NULL,
+    date_of_birth DATE NOT NULL,
+    total_points INT UNSIGNED NOT NULL DEFAULT 0,
+    total_wins INT UNSIGNED NOT NULL DEFAULT 0,
+
+    FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
