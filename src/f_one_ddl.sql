@@ -5,7 +5,7 @@ CREATE DATABASE IF NOT EXISTS FORMULA_ONE;
 -- Use the new database we just made
 USE FORMULA_ONE;
 
--- Represent each indnividual competing team
+-- Represent each indnividual competing team for each season
 CREATE TABLE teams(
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
     season_id INT UNSIGNED NOT NULL,
@@ -20,6 +20,35 @@ CREATE TABLE teams(
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
 );
 
+-- Represent each individual driver
+CREATE TABLE drivers(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    team_id INT UNSIGNED NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    nationality VARCHAR(50) NOT NULL,
+    racing_number INT NOT NULL,
+    date_of_birth DATE NOT NULL,
+    total_points INT UNSIGNED NOT NULL DEFAULT 0,
+    total_wins INT UNSIGNED NOT NULL DEFAULT 0,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+);
+
+-- Represent each season of competition
+CREATE TABLE seasons(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    year YEAR NOT NULL,
+    champion_driver_id INT,
+    champion_team_id INT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (champion_driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
+    FOREIGN KEY (champion_team_id) REFERENCES teams(id) ON DELETE CASCADE
+);
+
 -- Represent each individual account of the database
 CREATE TABLE users(
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
@@ -31,21 +60,4 @@ CREATE TABLE users(
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-);
-
--- Represent each individual driver
-CREATE TABLE drivers(
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
-    team_id INT UNSIGNED NOT NULL,
-    season_id INT UNSIGNED NOT NULL,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    nationality VARCHAR(50) NOT NULL,
-    racing_number INT NOT NULL,
-    date_of_birth DATE NOT NULL,
-    total_points INT UNSIGNED NOT NULL DEFAULT 0,
-    total_wins INT UNSIGNED NOT NULL DEFAULT 0,
-
-    FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
-    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
