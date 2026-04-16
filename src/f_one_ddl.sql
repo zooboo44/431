@@ -86,5 +86,23 @@ CREATE TABLE driver_standings(
     points INT NOT NULL DEFAULT 0,
     wins INT NOT NULL DEFAULT 0,
     podiums INT NOT NULL DEFAULT 0,
-    position INT NOT NULL
+    position INT NOT NULL,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
+    FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE
+);
+
+-- Represent current constructors championship standings
+CREATE TABLE constructor_standings(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    season_id INT NOT NULL,
+    team_id INT NOT NULL,
+    points INT NOT NULL DEFAULT 0,
+    wins INT NOT NULL DEFAULT 0,
+    position INT NOT NULL,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
