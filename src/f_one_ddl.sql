@@ -61,3 +61,19 @@ CREATE TABLE users(
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 );
+
+-- Represent each existing circuit
+CREATE TABLE circuits(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    country VARCHAR(50) NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    length_km FLOAT NOT NULL DEFAULT 1.0,
+    number_of_laps INT NOT NULL DEFAULT 10,
+    circuit_type VARCHAR(20) NOT NULL,
+    lap_record_time_ms INT,
+    lap_record_driver_id INT,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (lap_record_driver_id) REFERENCES drivers(id) ON DELETE CASCADE
+);
