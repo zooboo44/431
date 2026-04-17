@@ -7,7 +7,7 @@ USE FORMULA_ONE;
 -------------------------------------------------------------------------------
 
 CREATE TABLE driver(
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY;
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50)NOT NULL,
     street VARCHAR(250),
@@ -17,11 +17,23 @@ CREATE TABLE driver(
     zip CHAR(10),
     last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    UNIQUE INDEX index_full_name (Name_Last, Name_First),
-    INDEX index_last_name (Name_Last),
-    CONSTRAINT check_zip_code CHECK (ZipCode REGEXP '^(?!0{5})(?!9{5})\\d{5}(-(?!0{4})(?!9{4})\\d{4})?$'),
-    CONSTRAINT check_first_name CHECK (Name_First REGEXP '^[a-zA-Z0-9]+$'),
-    CONSTRAINT check_last_name CHECK (Name_Last REGEXP '^[a-zA-Z0-9]+$')
+    UNIQUE INDEX index_full_name (last_name, first_name),
+    INDEX index_last_name (last_name),
+    CONSTRAINT check_zip_code CHECK (zip REGEXP '^(?!0{5})(?!9{5})\\d{5}(-(?!0{4})(?!9{4})\\d{4})?$'),
+    CONSTRAINT check_first_name CHECK (first_name REGEXP '^[a-zA-Z0-9]+$'),
+    CONSTRAINT check_last_name CHECK (last_name REGEXP '^[a-zA-Z0-9]+$')
+);
+
+-- Teams have exactly two drivers
+CREATE TABLE team(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    team_name VARCHAR(255) NOT NULL,
+    driver_a_id INT UNSIGNED NOT NULL,
+    driver_b_id INT UNSIGNED NOT NULL,
+    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (driver_a_id) REFERENCES driver(id) ON DELETE CASCADE,
+    FOREIGN KEY (driver_b_id) REFERENCES driver(id) ON DELETE CASCADE
 );
 
 -------------------------------------------------------------------------------
