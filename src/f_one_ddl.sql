@@ -32,8 +32,8 @@ CREATE TABLE teams(
     driver_b_id INT UNSIGNED NOT NULL,
     last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (driver_a_id) REFERENCES driver(id) ON DELETE CASCADE,
-    FOREIGN KEY (driver_b_id) REFERENCES driver(id) ON DELETE CASCADE
+    FOREIGN KEY (driver_a_id) REFERENCES drivers(id) ON DELETE CASCADE,
+    FOREIGN KEY (driver_b_id) REFERENCES drivers(id) ON DELETE CASCADE
 );
 
 CREATE TABLE circuits(
@@ -46,7 +46,7 @@ CREATE TABLE circuits(
     lap_record_holder INT UNSIGNED
     last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (lap_record_holder) REFERENCES driver(id) ON DELETE CASCADE
+    FOREIGN KEY (lap_record_holder) REFERENCES drivers(id) ON DELETE CASCADE
 );
 
 CREATE TABLE races(
@@ -55,7 +55,7 @@ CREATE TABLE races(
     winner INT UNSIGNED NOT NULL
     last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (winner) REFERENCES driver(id) ON DELETE CASCADE
+    FOREIGN KEY (winner) REFERENCES drivers(id) ON DELETE CASCADE
 );
 
 -------------------------------------------------------------------------------
