@@ -52,10 +52,12 @@ CREATE TABLE circuits(
 CREATE TABLE races(
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     date DATE NOT NULL,
-    winner INT UNSIGNED NOT NULL
+    winner INT UNSIGNED NOT NULL,
+    circuit_id INT UNSIGNED NOT NULL,
     last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (winner) REFERENCES drivers(id) ON DELETE CASCADE
+    FOREIGN KEY (winner) REFERENCES drivers(id) ON DELETE CASCADE,
+    FOREIGN KEY (circuit_id) REFERENCES circuits(id) ON DELETE CASCADE
 );
 
 -------------------------------------------------------------------------------
