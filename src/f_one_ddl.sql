@@ -49,6 +49,15 @@ CREATE TABLE circuits(
     FOREIGN KEY (lap_record_holder) REFERENCES driver(id) ON DELETE CASCADE
 );
 
+CREATE TABLE races(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    date DATE NOT NULL,
+    winner INT UNSIGNED NOT NULL
+    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (winner) REFERENCES driver(id) ON DELETE CASCADE
+);
+
 -------------------------------------------------------------------------------
 -- USERS (ROLES)
 -------------------------------------------------------------------------------
