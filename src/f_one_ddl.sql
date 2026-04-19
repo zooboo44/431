@@ -41,17 +41,29 @@ CREATE TABLE circuits(
     name VARCHAR(255) NOT NULL,
     location VARCHAR(255) NOT NULL,
     length_km FLOAT NOT NULL,
-    laps INT NOT NULL,
-    lap_record_ms INT UNSIGNED,
-    lap_record_holder INT UNSIGNED
+    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Only the driver statistic is necessary to make as an object for its own tracking.
+-- Anything we'd want from circuit statistic can just be derived from this, saving us data space.
+-- We could skip race statistics if we really want to, because it could make sense to have everything in a race statistic be tied to the driver stats
+CREATE TABLE driver_statistic(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    driver_id INT UNSIGNED NOT NULL,
+    circuit_id INT UNSIGNED NOT NULL,
+    pit_stops INT UNSIGNED NOT NULL,
+    laps INT UNSIGNED NOT NULL,
+    best_lap_time_ms INT UNSIGNED NOT NULL,
     last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (lap_record_holder) REFERENCES drivers(id) ON DELETE CASCADE
+    FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
+    FOREIGN KEY (circuit_id) REFERENCES circuits(id) ON DELETE CASCADE
 );
 
 CREATE TABLE races(
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     date DATE NOT NULL,
+    laps INT NOT NULL,
     winner INT UNSIGNED NOT NULL,
     circuit_id INT UNSIGNED NOT NULL,
     last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
