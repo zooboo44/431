@@ -47,7 +47,7 @@ CREATE TABLE circuits(
 -- Only the driver statistic is necessary to make as an object for its own tracking.
 -- Anything we'd want from circuit statistic can just be derived from this, saving us data space.
 -- We could skip race statistics if we really want to, because it could make sense to have everything in a race statistic be tied to the driver stats
-CREATE TABLE driver_statistic(
+CREATE TABLE driver_statistics(
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     driver_id INT UNSIGNED NOT NULL,
     circuit_id INT UNSIGNED NOT NULL,
@@ -81,8 +81,40 @@ CREATE TABLE accounts(
     last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE
+);
+
+CREATE TABLE roles(
+    id TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    display_name VARCHAR(30) NOT NULL UNIQUE,
+    internal_name VARCHAR(255) NOT NULL UNIQUE,
+    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 )
 
 -------------------------------------------------------------------------------
 -- USERS (ROLES)
 -------------------------------------------------------------------------------
+
+-- Manager is allowed to do whatever they want
+DROP USER IF EXISTS 'manager'@'localhost';
+CREATE USER 'manager'@'localhost' IDENTIFIED BY 'manager_secret';
+GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON FORMULA_ONE.* TO 'manager'@'localhost';
+
+-- Coach has full access to the roster, but only edit access to stats
+DROP USER IF EXISTS 'coach'@'localhost';
+CREATE USER 'coach'@'localhost' IDENTIFIED BY 'coach_secret';
+GRANT SELECT ON FORMULA_ONE.* TO 'coach'@'localhost';
+GRANT INSERT, DELETE, UPDATE (first_name, last_name, street, city, state, country, zip) TO 'coach'@'localhost';
+GRANT UPDATE ON FORMULA_ONE.driver_statistics TO 'coach'@'localhost';
+
+-- Driver may only update their own address and maintain their own stats
+DROP USER IF EXISTS 'driver'@'localhost';
+CREATE USER 'driver'@'localhost' IDENTIFIED BY 'driver_secret';
+GRANT SELECT ON FORMULA_ONE.* TO 'driver'@'localhost';
+GRANT INSERT, DELETE, UPDATE (first_name, last_name, street, city, state, country, zip) TO 'driver'@'localhost';
+GRANT UPDATE (pit_stops, laps, best_lap_time_ms) TO 'driver'@'localhost';
+
+-- Observer used for login
+DROP USER IF EXISTS 'observer'@'localhost';
+CREATE USER 'observer'@'localhost' IDENTIFIED BY 'observer_secret';
+GRANT SELECT ON roles TO 'observer'@'localhost';
+GRANT SELECT ON accounts TO 'observer'@'localhost';
