@@ -72,6 +72,17 @@ CREATE TABLE races(
     FOREIGN KEY (circuit_id) REFERENCES circuits(id) ON DELETE CASCADE
 );
 
+CREATE TABLE accounts(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    user_role TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    driver_id INT UNSIGNED NOT NULL,
+    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE
+)
+
 -------------------------------------------------------------------------------
 -- USERS (ROLES)
 -------------------------------------------------------------------------------
