@@ -2,9 +2,9 @@ DROP DATABASE IF EXISTS FORMULA_ONE;
 CREATE DATABASE IF NOT EXISTS FORMULA_ONE;
 USE FORMULA_ONE;
 
--------------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
 -- TABLES
--------------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
 
 CREATE TABLE drivers(
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -90,9 +90,9 @@ CREATE TABLE roles(
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 )
 
--------------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
 -- USERS (ROLES)
--------------------------------------------------------------------------------
+-- -----------------------------------------------------------------------------
 
 -- Manager is allowed to do whatever they want
 DROP USER IF EXISTS 'manager'@'localhost';
