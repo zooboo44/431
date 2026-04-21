@@ -15,7 +15,7 @@ CREATE TABLE drivers(
     state VARCHAR(100),
     country VARCHAR(100),
     zip CHAR(10),
-    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     UNIQUE INDEX index_full_name (last_name, first_name),
     INDEX index_last_name (last_name),
@@ -30,7 +30,7 @@ CREATE TABLE teams(
     team_name VARCHAR(255) NOT NULL,
     driver_a_id INT UNSIGNED NOT NULL,
     driver_b_id INT UNSIGNED NOT NULL,
-    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (driver_a_id) REFERENCES drivers(id) ON DELETE CASCADE,
     FOREIGN KEY (driver_b_id) REFERENCES drivers(id) ON DELETE CASCADE
@@ -41,7 +41,7 @@ CREATE TABLE circuits(
     name VARCHAR(255) NOT NULL,
     location VARCHAR(255) NOT NULL,
     length_km FLOAT NOT NULL,
-    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Only the driver statistic is necessary to make as an object for its own tracking.
@@ -54,7 +54,7 @@ CREATE TABLE driver_statistics(
     pit_stops INT UNSIGNED NOT NULL,
     laps INT UNSIGNED NOT NULL,
     best_lap_time_ms INT UNSIGNED NOT NULL,
-    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
     FOREIGN KEY (circuit_id) REFERENCES circuits(id) ON DELETE CASCADE
@@ -66,7 +66,7 @@ CREATE TABLE races(
     laps INT NOT NULL,
     winner INT UNSIGNED NOT NULL,
     circuit_id INT UNSIGNED NOT NULL,
-    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (winner) REFERENCES drivers(id) ON DELETE CASCADE,
     FOREIGN KEY (circuit_id) REFERENCES circuits(id) ON DELETE CASCADE
@@ -78,7 +78,7 @@ CREATE TABLE accounts(
     password_hash VARCHAR(255) NOT NULL,
     user_role TINYINT UNSIGNED NOT NULL DEFAULT 1,
     driver_id INT UNSIGNED NOT NULL,
-    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE
 );
@@ -87,7 +87,7 @@ CREATE TABLE roles(
     id TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     display_name VARCHAR(30) NOT NULL UNIQUE,
     internal_name VARCHAR(255) NOT NULL UNIQUE,
-    last_modified TIMESTAMP CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 )
 
 -------------------------------------------------------------------------------
