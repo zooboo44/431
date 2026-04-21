@@ -87,7 +87,7 @@ CREATE TABLE roles(
     id TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     display_name VARCHAR(30) NOT NULL UNIQUE,
     internal_name VARCHAR(255) NOT NULL UNIQUE,
-    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- -----------------------------------------------------------------------------
