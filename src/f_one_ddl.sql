@@ -91,7 +91,7 @@ CREATE TABLE roles(
 );
 
 -- -----------------------------------------------------------------------------
--- USERS (ROLES)
+-- USERS
 -- -----------------------------------------------------------------------------
 
 -- Manager: Edit access to the entire database
@@ -120,3 +120,13 @@ DROP USER IF EXISTS 'observer'@'localhost';
 CREATE USER 'observer'@'localhost' IDENTIFIED BY 'observer_secret';
 GRANT SELECT ON FORMULA_ONE.roles TO 'observer'@'localhost';
 GRANT SELECT ON FORMULA_ONE.accounts TO 'observer'@'localhost';
+
+-- -----------------------------------------------------------------------------
+-- ROLES
+-- -----------------------------------------------------------------------------
+
+INSERT INTO roles (id, display_name, internal_name) VALUES
+(1, 'Observer', 'observer'),
+(2, 'Driver', 'driver'),
+(3, 'Coach', 'coach'),
+(4, 'Manager', 'manager');
