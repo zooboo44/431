@@ -94,10 +94,10 @@ CREATE TABLE roles(
 -- USERS
 -- -----------------------------------------------------------------------------
 
--- Manager: Edit access to the entire database
-DROP USER IF EXISTS 'manager'@'localhost';
-CREATE USER 'manager'@'localhost' IDENTIFIED BY 'manager_secret';
-GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON FORMULA_ONE.* TO 'manager'@'localhost';
+-- administrator: Edit access to the entire database
+DROP USER IF EXISTS 'administrator'@'localhost';
+CREATE USER 'administrator'@'localhost' IDENTIFIED BY 'administrator_secret';
+GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON FORMULA_ONE.* TO 'administrator'@'localhost';
 
 -- Coach: Read access to entire database, may edit and create new drivers, but may only edit statistics
 DROP USER IF EXISTS 'coach'@'localhost';
@@ -135,4 +135,4 @@ INSERT INTO roles (id, display_name, internal_name) VALUES
 (1, 'Visitor', 'visitor'),
 (2, 'Driver', 'driver'),
 (3, 'Coach', 'coach'),
-(4, 'Manager', 'manager');
+(4, 'Administrator', 'administrator');
