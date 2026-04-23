@@ -34,10 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 			header("Location: homepage.php");
 			exit();
 		} else {
-			$error ="Invalid password";
+			$error = "Invalid username or password. Please try again!";
 		}
 	} else {
-		$error ="User not found";
+		$error = "Invalid username or password. Please try again!";
 	}
 	$stmt->close();
 	$db->close();
