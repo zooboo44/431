@@ -14,4 +14,10 @@ if ($files) {
     }
 }
 
+// If debug mode is turned on, password generation will also run
+$debug_mode = true;
+if ($debug_mode) {
+    require_once("password_generation.php");
+}
+
 ?>
