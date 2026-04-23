@@ -9,13 +9,13 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 
 	$db = new mysqli("localhost", "root", '', "FORMULA_ONE");
 	if ($db->connect_error) {
-		die("Could not connect to database! Please try again later");
+		die("Could not connect to database! Please try again later.");
 	}
 
 	$username = $_POST['username'] ?? '';
 	$password = $_POST['password'] ?? '';
 
-	$query = "SELECT id, username, password FROM accounts WHERE username = ?";
+	$query = "SELECT accounts.id, accounts.username, accounts.password_hash FROM accounts WHERE username = ?";
 	$stmt = $db->prepare($query);
 
 	if (!$stmt) {
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 	$result = $stmt->get_result();
 
 	if ($user = $result->fetch_assoc()) {
-		if (password_verify($password, $user['password'])) {
+		if (password_verify($password, $user['password_hash'])) {
 			session_regenerate_id(true);
 
 			$_SESSION['user_id'] = $user['id'];

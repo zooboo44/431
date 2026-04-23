@@ -33,7 +33,7 @@ while ($stmt->fetch()) {
 }
 
 // Set account passwords to the just generated hashes
-$query2 = "UPDATE accounts SET password = ? WHERE driver_id = ?";
+$query2 = "UPDATE accounts SET password_hash = ? WHERE driver_id = ?";
 $stmt2 = $db->prepare($query2);
 foreach($accounts as $account) {
     $stmt2->bind_param("si", $account['password'], account['id']);
