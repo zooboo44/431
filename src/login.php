@@ -9,13 +9,13 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 
 	$db = new mysqli("localhost", "root", '', "FORMULA_ONE");
 	if ($db->connect_error) {
-		die("Could not connect to database");
+		die("Could not connect to database! Please try again later");
 	}
 
 	$username = $_POST['username'] ?? '';
 	$password = $_POST['password'] ?? '';
 
-	$query = "SELECT id, username, password_hash FROM accounts WHERE username = ?";
+	$query = "SELECT id, username, password FROM accounts WHERE username = ?";
 	$stmt = $db->prepare($query);
 
 	if (!$stmt) {
