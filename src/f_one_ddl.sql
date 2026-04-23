@@ -115,6 +115,11 @@ GRANT INSERT, UPDATE (first_name, last_name, street, city, state, country, zip) 
 GRANT DELETE ON FORMULA_ONE.drivers TO 'driver'@'localhost';
 GRANT UPDATE (pit_stops, laps, best_lap_time_ms) ON FORMULA_ONE.driver_statistics TO 'driver'@'localhost';
 
+-- Visitor: Read access to the entire database, but cannot edit anything
+DROP USER IF EXISTS 'visitor'@'localhost';
+CREATE USER 'visitor'@'localhost' IDENTIFIED BY 'visitor_secret';
+GRANT SELECT ON FORMULA_ONE.* TO 'visitor'@'localhost';
+
 -- Observer: Only has access to roles and accounts
 DROP USER IF EXISTS 'observer'@'localhost';
 CREATE USER 'observer'@'localhost' IDENTIFIED BY 'observer_secret';
@@ -126,7 +131,8 @@ GRANT SELECT ON FORMULA_ONE.accounts TO 'observer'@'localhost';
 -- -----------------------------------------------------------------------------
 
 INSERT INTO roles (id, display_name, internal_name) VALUES
-(1, 'Observer', 'observer'),
+(0, 'Observer', 'observer'),
+(1, 'Visitor', 'visitor'),
 (2, 'Driver', 'driver'),
 (3, 'Coach', 'coach'),
 (4, 'Manager', 'manager');
