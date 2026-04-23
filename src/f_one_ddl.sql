@@ -94,7 +94,7 @@ CREATE TABLE roles(
 -- USERS
 -- -----------------------------------------------------------------------------
 
--- administrator: Edit access to the entire database
+-- Administrator: Edit access to the entire database
 DROP USER IF EXISTS 'administrator'@'localhost';
 CREATE USER 'administrator'@'localhost' IDENTIFIED BY 'administrator_secret';
 GRANT SELECT, INSERT, DELETE, UPDATE, EXECUTE ON FORMULA_ONE.* TO 'administrator'@'localhost';
