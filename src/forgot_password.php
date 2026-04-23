@@ -5,7 +5,7 @@ $email=trim($_POST['email']);
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Bob's Auto Parts - Feedback Submitted</title>
+    <title>F1 Statistics - Feedback Submitted</title>
   </head>
   <body>
     <h1>Change password Request submitted</h1>

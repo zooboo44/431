@@ -1,3 +1,49 @@
+<?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+session_start();
+$error = "";
+if ($_SERVER['REQUEST_METHOD'] === "POST") {
+
+	$db = new mysqli("localhost", "root", '', "FORMULA_ONE");
+	if ($db->connect_error) {
+		die("Could not connect to database");
+	}
+
+	$username = $_POST['username'] ?? '';
+	$password = $_POST['password'] ?? '';
+
+	$query = "SELECT id, username, password_hash FROM accounts WHERE username = ?";
+	$stmt = $db->prepare($query);
+
+	if (!$stmt) {
+	    die("Query failed");
+	}
+	$stmt->bind_param("s", $username);
+	$stmt->execute();
+	$result = $stmt->get_result();
+
+	if ($user = $result->fetch_assoc()) {
+		if (password_verify($password, $user['password_hash'])) {
+			session_regenerate_id(true);
+
+			$_SESSION['user_id'] = $user['id'];
+			$_SESSION['username'] = $user['username'];
+			header("Location: homepage.php");
+			exit();
+		} else {
+			$error ="Invalid password";
+		}
+	} else {
+		$error ="User not found";
+	}
+	$stmt->close();
+	$db->close();
+
+}
+?>
 <!DOCTYPE html>
 <html>
 	<head>
@@ -8,7 +54,11 @@
 	<body>
 
 		<h1 style="text-align:left;">Login</h1>
-		<form action="member.php" method="POST">
+
+		<?php if (!empty($error)): ?>
+		    <p style="color:red;"><?php echo $error; ?></p>
+		<?php endif; ?>
+		<form action="login.php" method="POST">
 			<a href="<?php echo 'register_form.php'; ?>">Dont have an account?</a>
 			<br><br>
 			<label>Username: </label>
