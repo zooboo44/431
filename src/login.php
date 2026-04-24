@@ -7,7 +7,7 @@ session_start();
 $error = "";
 if ($_SERVER['REQUEST_METHOD'] === "POST") {
 
-	$db = new mysqli("localhost", "root", '', "FORMULA_ONE");
+	$db = new mysqli("localhost", "observer", 'observer_secret', "FORMULA_ONE");
 	if ($db->connect_error) {
 		die("Could not connect to database! Please try again later.");
 	}
