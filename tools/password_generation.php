@@ -16,6 +16,7 @@ if (mysqli_connect_errno()) {
 
 // Generate passwords for every sample user in the database
 // In this case, all accounts will have their password be the same as the username
+// Note that no sane person would actually do this, this is solely for development purposes
 $query = "SELECT drivers.id, drivers.first_name, drivers.last_name
 FROM drivers";
 $stmt = $db->prepare($query);
