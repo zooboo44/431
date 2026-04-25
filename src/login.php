@@ -5,15 +5,19 @@ error_reporting(E_ALL);
 
 session_start();
 $error = "";
-if ($_SERVER['REQUEST_METHOD'] === "POST") {
+if ($_SERVER['REQUEST_METHOD'] === "POST" &&
+	isset($_POST['username'], $_POST['password'])) {
 
-	$db = new mysqli("localhost", "observer", 'observer_secret', "FORMULA_ONE");
+	$db = new mysqli("localhost", "root", '', "FORMULA_ONE");
 	if ($db->connect_error) {
 		die("Could not connect to database! Please try again later.");
 	}
 
 	$username = $_POST['username'] ?? '';
 	$password = $_POST['password'] ?? '';
+	if (empty($username) || empty($password)) {
+		$error = "";
+	}
 
 	$query = "SELECT accounts.id, accounts.username, accounts.password_hash FROM accounts WHERE username = ?";
 	$stmt = $db->prepare($query);
@@ -31,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 
 			$_SESSION['user_id'] = $user['id'];
 			$_SESSION['username'] = $user['username'];
-			header("Location: homepage.php");
+			header("Location: member.php");
 			exit();
 		} else {
 			$error = "Invalid username or password. Please try again!";

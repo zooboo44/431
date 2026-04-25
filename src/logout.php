@@ -15,5 +15,8 @@ session_destroy();
 </head>
 <body>
 	<h1 style="text-align: center;">Logged out</h1>
+	<form action="login.php" method="GET">
+  	  <button type="submit">Return to login</button>
+	</form>
 </body>
 </html>

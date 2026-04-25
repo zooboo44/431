@@ -1,3 +1,13 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['user_id'])) {
+	header("Location: login.php");
+	exit();
+}
+
+?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -11,15 +21,15 @@
 	<form action="change_password.php" method="POST">
 		<label>Enter current password:</label>
 		<br>
-		<input type="password" name="password" required>
+		<input type="text" name="current_password" required>
 		<br>
 		<label>Enter new password:</label>
 		<br>
-		<input type="password" name="new_password" required>
+		<input type="text" name="new_password" required>
 		<br>
 		<label>Confirm password:</label>
 		<br>
-		<input type="password" name="confirmed_password" required>
+		<input type="text" name="confirmed_password" required>
 		<br><br>
 		<button type="submit">Change password</button>
 	</form>

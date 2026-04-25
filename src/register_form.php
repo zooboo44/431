@@ -6,14 +6,14 @@
 		</title>
 	</head>
 	<body>
-		<form action="login.php" method="POST">
+		<form action="login.php" method="GET">
 		<button type="submit">Go back</button>
 		</form>
 		<h1 style="text-align:left;">Registering new account</h1>
 		<form action="register_new.php" method="POST">
 			<label>Enter Email: </label>
 			<br>
-			<input type="text" name="email" required>
+			<input type="email" name="email" required>
 			<br>
 			<label>Create username: </label>
 			<br>
