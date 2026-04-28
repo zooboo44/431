@@ -61,6 +61,9 @@ renderFlash();
         <div class="table-search">
             <input type="text" class="table-search-input" data-table="results-table" placeholder="Search races...">
         </div>
+        <?php if (($_SESSION['role'] ?? '') !== 'fan'): ?>
+        <button class="btn btn-outline btn-sm" data-export-csv="results-table" data-filename="results_<?= h((string)$selectedYear) ?>.csv">Export CSV</button>
+        <?php endif; ?>
     </div>
     <table class="sortable" id="results-table">
         <thead><tr>
@@ -68,13 +71,13 @@ renderFlash();
         </tr></thead>
         <tbody>
         <?php foreach ($races as $r): ?>
-        <tr class="clickable-row" data-href="<?= APP_URL ?>/public/race_detail.php?id=<?= (int)$r['id'] ?>">
+        <tr class="clickable-row" data-href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$r['id'] ?>">
             <td><span class="round-chip"><?= h((string)$r['round_number']) ?></span></td>
             <td><strong><?= h($r['name']) ?></strong><?= $r['has_sprint'] ? ' <span class="status-badge status-in_progress" style="font-size:0.7rem">SPRINT</span>' : '' ?></td>
             <td><?= h($r['circuit']) ?></td>
             <td class="text-muted"><?= h($r['country']) ?></td>
             <td class="text-muted"><?= h(date('d M Y', strtotime($r['race_date']))) ?></td>
-            <td class="no-row-click"><a href="<?= APP_URL ?>/public/race_detail.php?id=<?= (int)$r['id'] ?>" class="btn btn-outline btn-sm">Results &rarr;</a></td>
+            <td class="no-row-click"><a href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$r['id'] ?>" class="btn btn-outline btn-sm">Results &rarr;</a></td>
         </tr>
         <?php endforeach; ?>
         </tbody>

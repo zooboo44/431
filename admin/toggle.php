@@ -65,10 +65,24 @@ switch ($entity) {
         if ($activate) {
             $active = getActiveSeason();
             if ($active) {
+                // Max 20 active drivers total across the active season
                 $cnt = $db->prepare('SELECT COUNT(*) FROM driver_seasons ds JOIN people p ON p.id=ds.person_id WHERE ds.season_id=? AND p.is_active=1');
                 $cnt->execute([$active['id']]);
                 if ((int)$cnt->fetchColumn() >= 20) {
-                    redirectWithMessage($returnTo, 'danger', 'Maximum 20 active drivers per season.');
+                    redirectWithMessage($returnTo, 'danger', 'Maximum 20 active drivers per season. Deactivate one first.');
+                }
+                // Max 2 active drivers per team in the active season
+                $teamCnt = $db->prepare("
+                    SELECT COUNT(*) FROM driver_seasons ds2
+                    JOIN people p2 ON p2.id = ds2.person_id
+                    JOIN driver_seasons ds_target ON ds_target.person_id = ? AND ds_target.season_id = ?
+                    WHERE ds2.team_season_id = ds_target.team_season_id
+                      AND ds2.season_id = ?
+                      AND p2.is_active = 1
+                ");
+                $teamCnt->execute([$id, $active['id'], $active['id']]);
+                if ((int)$teamCnt->fetchColumn() >= 2) {
+                    redirectWithMessage($returnTo, 'danger', 'This team already has 2 active drivers for the current season. Deactivate one first.');
                 }
             }
         }

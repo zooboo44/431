@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($forced) {
                     $role = $_SESSION['role'] ?? '';
-                    $dest = ROLE_DASHBOARDS[$role] ?? APP_URL . '/public/standings.php';
+                    $dest = ROLE_DASHBOARDS[$role] ?? APP_URL . '/shared/standings.php';
                     redirectWithMessage($dest, 'success', 'Password changed successfully. Welcome!');
                 }
                 $saved = true;

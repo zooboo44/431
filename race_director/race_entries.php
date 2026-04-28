@@ -7,6 +7,37 @@ $db     = getDB();
 $errors = [];
 $raceId = intval($_GET['race_id'] ?? 0);
 
+if (!$raceId) {
+    $activeSeason = getActiveSeason();
+    $seasonId = $activeSeason['id'] ?? null;
+    $raceList = [];
+    if ($seasonId) {
+        $rlStmt = $db->prepare("SELECT r.id, r.name, r.round_number, r.race_date, r.status, (SELECT COUNT(*) FROM race_entries re WHERE re.race_id=r.id) AS entry_count FROM races r WHERE r.season_id = ? ORDER BY r.round_number ASC");
+        $rlStmt->execute([$seasonId]);
+        $raceList = $rlStmt->fetchAll();
+    }
+    $pageTitle = 'Race Entries — Select Race';
+    renderFlash();
+    echo '<div class="page-header"><div><h1 class="page-title">Race Entries</h1><p class="page-subtitle">Select a race to manage entries</p></div></div>';
+    echo '<div class="card"><div class="card-title">&#128203; ' . h((string)($activeSeason['year'] ?? '')) . ' Races</div>';
+    if (empty($raceList)) { echo '<div class="empty-state"><p>No races found for the active season.</p></div>'; }
+    else {
+        echo '<div class="table-container" style="border:0;margin:0"><table><thead><tr><th>Rd</th><th>Race</th><th>Date</th><th>Entries</th><th>Status</th><th></th></tr></thead><tbody>';
+        foreach ($raceList as $rl) {
+            echo '<tr><td><span class="round-chip">' . h((string)$rl['round_number']) . '</span></td>'
+               . '<td><strong>' . h($rl['name']) . '</strong></td>'
+               . '<td class="text-muted">' . h(date('d M Y', strtotime($rl['race_date']))) . '</td>'
+               . '<td>' . ($rl['entry_count'] > 0 ? '<span class="text-success">' . $rl['entry_count'] . '</span>' : '<span class="text-muted">0</span>') . '</td>'
+               . '<td><span class="status-badge status-' . h($rl['status']) . '">' . h($rl['status']) . '</span></td>'
+               . '<td><a href="' . APP_URL . '/race_director/race_entries.php?race_id=' . (int)$rl['id'] . '" class="btn btn-primary btn-sm">Manage Entries</a></td></tr>';
+        }
+        echo '</tbody></table></div>';
+    }
+    echo '</div>';
+    require_once __DIR__ . '/../includes/footer.php';
+    exit;
+}
+
 $stmt = $db->prepare("SELECT r.*, c.name AS circuit, s.year AS season_year, r.season_id FROM races r JOIN circuits c ON c.id=r.circuit_id JOIN seasons s ON s.id=r.season_id WHERE r.id=?");
 $stmt->execute([$raceId]);
 $race = $stmt->fetch();
@@ -26,7 +57,9 @@ $stmt = $db->prepare("
 $stmt->execute([$raceId]);
 $entries = $stmt->fetchAll();
 
-// Drivers registered for this season who aren't yet entered
+// Drivers registered for this season who aren't yet entered.
+// ds.id = MAX(ds2.id) deduplicates drivers who transferred teams mid-season
+// (they'd have two driver_seasons rows for the same season) — take their latest registration.
 $stmt = $db->prepare("
     SELECT ds.person_id, ds.team_season_id,
            p.first_name, p.last_name, p.racing_number, t.name AS team_name
@@ -34,11 +67,16 @@ $stmt = $db->prepare("
     JOIN people p ON p.id = ds.person_id
     JOIN team_seasons ts ON ts.id = ds.team_season_id
     JOIN teams t ON t.id = ts.team_id
-    WHERE ds.season_id = ? AND ds.status = 'active'
-    AND ds.person_id NOT IN (SELECT person_id FROM race_entries WHERE race_id = ?)
+    WHERE ds.season_id = ?
+      AND ds.status = 'active'
+      AND ds.person_id NOT IN (SELECT person_id FROM race_entries WHERE race_id = ?)
+      AND ds.id = (
+          SELECT MAX(ds2.id) FROM driver_seasons ds2
+          WHERE ds2.person_id = ds.person_id AND ds2.season_id = ? AND ds2.status = 'active'
+      )
     ORDER BY p.racing_number
 ");
-$stmt->execute([$race['season_id'], $raceId]);
+$stmt->execute([$race['season_id'], $raceId, $race['season_id']]);
 $availableDrivers = $stmt->fetchAll();
 
 // Handle add entry

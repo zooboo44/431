@@ -164,7 +164,6 @@ renderFlash();
             <td class="text-muted"><?= $lap['tyre_age_laps'] !== null ? h((string)$lap['tyre_age_laps']) . 'L' : '—' ?></td>
             <td><?= $lap['is_pit_lap'] ? '<span class="status-badge status-warning">PIT</span>' : '' ?></td>
             <td class="no-row-click" style="display:flex;gap:0.35rem">
-                <a href="<?= APP_URL ?>/engineer/telemetry_add.php?race_id=<?= $lap['race_id'] ?>&person_id=<?= $lap['person_id'] ?>" class="btn btn-outline btn-sm">+ More</a>
                 <form method="post">
                     <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
                     <input type="hidden" name="lap_id" value="<?= (int)$lap['id'] ?>">

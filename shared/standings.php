@@ -32,7 +32,7 @@ if ($selectedSeasonId) {
     $driverStandings = $stmt->fetchAll();
 
     $stmt = $db->prepare("
-        SELECT cs.position, cs.points, cs.wins, t.name, t.short_name, t.nationality
+        SELECT cs.position, cs.points, cs.wins, t.id AS team_id, t.name, t.short_name, t.nationality
         FROM constructor_standings cs
         JOIN teams t ON t.id = cs.team_id
         WHERE cs.season_id = ?
@@ -81,7 +81,7 @@ renderFlash();
                 <tr>
                     <td><span class="position-badge pos-<?= $d['position'] <= 3 ? $d['position'] : 'other' ?>"><?= h((string)$d['position']) ?></span></td>
                     <td>
-                        <a href="<?= APP_URL ?>/admin/person_detail.php?id=<?= (int)$d['person_id'] ?>" style="font-weight:600"><?= h($d['first_name'] . ' ' . $d['last_name']) ?></a>
+                        <a href="<?= APP_URL ?>/shared/driver_detail.php?id=<?= (int)$d['person_id'] ?>" style="font-weight:600"><?= h($d['first_name'] . ' ' . $d['last_name']) ?></a>
                         <div style="font-size:0.75rem;color:var(--text-muted)">#<?= h((string)$d['racing_number']) ?> &bull; <?= h($d['nationality']) ?></div>
                     </td>
                     <td class="text-muted"><?= h($d['short_name']) ?></td>
@@ -94,9 +94,11 @@ renderFlash();
                 </tbody>
             </table>
         </div>
+        <?php if (($_SESSION['role'] ?? '') !== 'fan'): ?>
         <div style="margin-top:0.75rem">
             <button class="btn btn-outline btn-sm" data-export-csv="driver-standings-table" data-filename="driver_standings_<?= h((string)$selectedYear) ?>.csv">Export CSV</button>
         </div>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -115,7 +117,7 @@ renderFlash();
                 <tr>
                     <td><span class="position-badge pos-<?= $c['position'] <= 3 ? $c['position'] : 'other' ?>"><?= h((string)$c['position']) ?></span></td>
                     <td>
-                        <strong><?= h($c['name']) ?></strong>
+                        <a href="<?= APP_URL ?>/shared/team_detail.php?id=<?= (int)$c['team_id'] ?>" style="font-weight:600"><?= h($c['name']) ?></a>
                         <div style="font-size:0.75rem;color:var(--text-muted)"><?= h($c['nationality']) ?></div>
                     </td>
                     <td><strong class="text-accent"><?= h((string)$c['points']) ?></strong></td>
@@ -125,9 +127,11 @@ renderFlash();
                 </tbody>
             </table>
         </div>
+        <?php if (($_SESSION['role'] ?? '') !== 'fan'): ?>
         <div style="margin-top:0.75rem">
             <button class="btn btn-outline btn-sm" data-export-csv="constructor-standings-table" data-filename="constructor_standings_<?= h((string)$selectedYear) ?>.csv">Export CSV</button>
         </div>
+        <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>

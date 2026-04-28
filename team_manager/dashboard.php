@@ -111,14 +111,13 @@ renderFlash();
         <?php foreach ($teamDrivers as $d): ?>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-bottom:1px solid var(--border)">
             <div>
-                <strong>#<?= h((string)$d['racing_number']) ?> <?= h($d['first_name'] . ' ' . $d['last_name']) ?></strong>
+                <a href="<?= APP_URL ?>/team_manager/driver_profile.php?person_id=<?= $d['id'] ?>" style="font-weight:600">#<?= h((string)$d['racing_number']) ?> <?= h($d['first_name'] . ' ' . $d['last_name']) ?></a>
                 <div class="text-muted" style="font-size:0.8rem">
                     <?= $d['standing_pos'] ? 'Championship P' . h((string)$d['standing_pos']) : 'No standing yet' ?>
                 </div>
             </div>
             <div style="text-align:right">
                 <div class="text-accent fw-bold"><?= h((string)($d['points'] ?? 0)) ?> pts</div>
-                <a href="<?= APP_URL ?>/team_manager/driver_profile.php?person_id=<?= $d['id'] ?>" class="btn btn-outline btn-sm" style="margin-top:0.3rem">Profile</a>
             </div>
         </div>
         <?php endforeach; ?>

@@ -25,7 +25,7 @@ if (!$driver) {
 
 // Career season stats (all seasons, for Chart.js)
 $stmt = $db->prepare("
-    SELECT s.year, s.id AS season_id, t.name AS team_name,
+    SELECT s.year, s.id AS season_id, t.id AS team_id, t.name AS team_name,
            ds_stand.points, ds_stand.wins, ds_stand.podiums, ds_stand.dnfs,
            ds_stand.fastest_laps, ds_stand.position
     FROM driver_seasons drs
@@ -127,7 +127,7 @@ if ($activeSeasonId) {
     <!-- Points progression chart -->
     <div class="card">
         <div class="card-title">Points Progression</div>
-        <?php if (count($chartLabels) > 0): ?>
+        <?php if (count($chartLabels) >= 2): ?>
         <canvas id="pointsChart" height="220"></canvas>
         <script>
         (function() {
@@ -162,8 +162,10 @@ if ($activeSeasonId) {
             });
         })();
         </script>
+        <?php elseif (count($chartLabels) === 1): ?>
+        <div class="empty-state"><p>Not enough race data to display chart. Participate in at least 2 races.</p></div>
         <?php else: ?>
-        <div class="empty-state"><p>No season data yet.</p></div>
+        <div class="empty-state"><p>No race data yet for this season.</p></div>
         <?php endif; ?>
     </div>
 
@@ -179,7 +181,7 @@ if ($activeSeasonId) {
             <?php foreach (array_reverse($seasonStats) as $ss): ?>
             <tr>
                 <td><strong><?= h((string)$ss['year']) ?></strong></td>
-                <td class="text-muted"><?= h($ss['team_name']) ?></td>
+                <td><a href="<?= APP_URL ?>/shared/team_detail.php?id=<?= (int)$ss['team_id'] ?>" class="text-muted"><?= h($ss['team_name']) ?></a></td>
                 <td><?= $ss['position'] ? 'P' . h((string)$ss['position']) : '—' ?></td>
                 <td class="text-accent fw-bold"><?= h(number_format((float)($ss['points'] ?? 0), 1)) ?></td>
                 <td><?= h((string)($ss['wins'] ?? 0)) ?></td>

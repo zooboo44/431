@@ -30,9 +30,9 @@ switch ($entity) {
         $stmt->execute([$id]);
         $row = $stmt->fetch();
         if (!$row) { redirectWithMessage($returnTo, 'danger', 'Team not found.'); }
-        $db->prepare('UPDATE teams SET is_active=0 WHERE id = ?')->execute([$id]);
-        logAudit($_SESSION['user_id'], 'deactivate', 'teams', $id, $row['name']);
-        redirectWithMessage($returnTo, 'success', "Team '{$row['name']}' deactivated (historical data preserved).");
+        $db->prepare('DELETE FROM teams WHERE id = ?')->execute([$id]);
+        logAudit($_SESSION['user_id'], 'delete', 'teams', $id, $row['name']);
+        redirectWithMessage($returnTo, 'success', "Team '{$row['name']}' deleted.");
 
     case 'person':
         if ($id <= 0) break;
@@ -40,9 +40,9 @@ switch ($entity) {
         $stmt->execute([$id]);
         $row = $stmt->fetch();
         if (!$row) { redirectWithMessage($returnTo, 'danger', 'Driver not found.'); }
-        $db->prepare('UPDATE people SET is_active=0 WHERE id = ?')->execute([$id]);
-        logAudit($_SESSION['user_id'], 'deactivate', 'people', $id, $row['name']);
-        redirectWithMessage($returnTo, 'success', "Driver '{$row['name']}' deactivated (historical data preserved).");
+        $db->prepare('DELETE FROM people WHERE id = ?')->execute([$id]);
+        logAudit($_SESSION['user_id'], 'delete', 'people', $id, $row['name']);
+        redirectWithMessage($returnTo, 'success', "Driver '{$row['name']}' deleted.");
 
     case 'circuit':
         if ($id <= 0) break;

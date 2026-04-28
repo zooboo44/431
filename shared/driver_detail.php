@@ -1,27 +1,22 @@
 <?php
 $pageTitle = 'Driver Profile';
 require_once __DIR__ . '/../includes/header.php';
-requireRole('team_manager');
+requireRole('team_manager', 'engineer', 'driver', 'media', 'fan', 'race_director', 'admin');
 
 $db       = getDB();
-$teamId   = intval($_SESSION['linked_id'] ?? 0);
-$personId = intval($_GET['person_id'] ?? 0);
+$personId = intval($_GET['id'] ?? 0);
 
-// IDOR: verify this driver has raced for the manager's team
-$stmt = $db->prepare("
-    SELECT p.* FROM people p
-    JOIN driver_seasons drs ON drs.person_id = p.id
-    JOIN team_seasons ts ON ts.id = drs.team_season_id AND ts.team_id = ?
-    WHERE p.id = ? LIMIT 1
-");
-$stmt->execute([$teamId, $personId]);
+$stmt = $db->prepare("SELECT * FROM people WHERE id = ? AND is_active = 1");
+$stmt->execute([$personId]);
 $person = $stmt->fetch();
-if (!$person) { include __DIR__ . '/../includes/403.php'; exit; }
+if (!$person) { include __DIR__ . '/../includes/404.php'; exit; }
 
-// Career stats per season
+$pageTitle = h($person['first_name'] . ' ' . $person['last_name']) . ' — Profile';
+
+// Career by season
 $stmt = $db->prepare("
-    SELECT s.year, t.id AS team_id, t.name AS team_name, drs.status,
-           ds.points, ds.wins, ds.podiums, ds.dnfs, ds.fastest_laps, ds.position
+    SELECT s.year, s.id AS season_id, t.name AS team_name, t.id AS team_id, drs.status,
+           ds.position, ds.points, ds.wins, ds.podiums, ds.fastest_laps, ds.dnfs
     FROM driver_seasons drs
     JOIN seasons s ON s.id = drs.season_id
     JOIN team_seasons ts ON ts.id = drs.team_season_id
@@ -33,44 +28,40 @@ $stmt = $db->prepare("
 $stmt->execute([$personId]);
 $careerBySeasons = $stmt->fetchAll();
 
-// Recent race results (for this team's races only)
+// Recent race results (all races, public-level)
 $stmt = $db->prepare("
     SELECT r.id AS race_id, r.name AS race_name, r.round_number, s.year,
            rr.finish_position, rr.points_scored, rr.status, rr.fastest_lap_bonus,
-           qr.grid_position
+           qr.grid_position, t.short_name
     FROM race_results rr
     JOIN race_entries re ON re.id = rr.race_entry_id AND re.person_id = ?
-    JOIN race_entries re2 ON re2.id = rr.race_entry_id
-    JOIN team_seasons ts ON ts.id = re2.team_season_id AND ts.team_id = ?
-    JOIN races r ON r.id = re2.race_id
+    JOIN races r ON r.id = re.race_id
     JOIN seasons s ON s.id = r.season_id
+    JOIN team_seasons ts ON ts.id = re.team_season_id
+    JOIN teams t ON t.id = ts.team_id
     LEFT JOIN qualifying_results qr ON qr.race_entry_id = re.id
     ORDER BY r.race_date DESC
     LIMIT 20
 ");
-$stmt->execute([$personId, $teamId]);
+$stmt->execute([$personId]);
 $recentResults = $stmt->fetchAll();
 
-$pageTitle = h($person['first_name'] . ' ' . $person['last_name']) . ' — Profile';
+$totalPts  = array_sum(array_column($careerBySeasons, 'points'));
+$totalWins = array_sum(array_column($careerBySeasons, 'wins'));
+$totalPods = array_sum(array_column($careerBySeasons, 'podiums'));
+$totalDnfs = array_sum(array_column($careerBySeasons, 'dnfs'));
 ?>
 
 <div class="page-header">
     <div>
         <h1 class="page-title">#<?= h((string)$person['racing_number']) ?> <?= h($person['first_name'] . ' ' . $person['last_name']) ?></h1>
-        <p class="page-subtitle"><?= h($person['nationality']) ?> &bull; Born <?= h(date('d M Y', strtotime($person['date_of_birth']))) ?></p>
+        <p class="page-subtitle"><?= h($person['nationality']) ?><?= $person['date_of_birth'] ? ' &bull; Born ' . h(date('d M Y', strtotime($person['date_of_birth']))) : '' ?></p>
     </div>
-    <a href="<?= APP_URL ?>/team_manager/drivers.php" class="btn btn-outline">&larr; Drivers</a>
+    <a href="javascript:history.back()" class="btn btn-outline">&larr; Back</a>
 </div>
 
-<!-- Career summary -->
 <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
-    <?php
-    $totalPts  = array_sum(array_column($careerBySeasons, 'points'));
-    $totalWins = array_sum(array_column($careerBySeasons, 'wins'));
-    $totalPods = array_sum(array_column($careerBySeasons, 'podiums'));
-    $totalDnfs = array_sum(array_column($careerBySeasons, 'dnfs'));
-    ?>
-    <div class="stat-card"><div class="stat-value"><?= h(number_format($totalPts,1)) ?></div><div class="stat-label">Career Points</div></div>
+    <div class="stat-card"><div class="stat-value"><?= h(number_format((float)$totalPts, 1)) ?></div><div class="stat-label">Career Points</div></div>
     <div class="stat-card"><div class="stat-value"><?= h((string)$totalWins) ?></div><div class="stat-label">Wins</div></div>
     <div class="stat-card"><div class="stat-value"><?= h((string)$totalPods) ?></div><div class="stat-label">Podiums</div></div>
     <div class="stat-card"><div class="stat-value"><?= h((string)$totalDnfs) ?></div><div class="stat-label">DNFs</div></div>
@@ -88,7 +79,7 @@ $pageTitle = h($person['first_name'] . ' ' . $person['last_name']) . ' — Profi
             <?php foreach ($careerBySeasons as $cs): ?>
             <tr>
                 <td><strong><?= h((string)$cs['year']) ?></strong></td>
-                <td><a href="<?= APP_URL ?>/shared/team_detail.php?id=<?= (int)$cs['team_id'] ?>" class="text-muted"><?= h($cs['team_name']) ?></a></td>
+                <td><a href="<?= APP_URL ?>/shared/team_detail.php?id=<?= (int)$cs['team_id'] ?>"><?= h($cs['team_name']) ?></a></td>
                 <td><?= $cs['position'] ? 'P' . h((string)$cs['position']) : '—' ?></td>
                 <td class="text-accent fw-bold"><?= h((string)($cs['points'] ?? 0)) ?></td>
                 <td><?= h((string)($cs['wins'] ?? 0)) ?></td>
@@ -101,7 +92,7 @@ $pageTitle = h($person['first_name'] . ' ' . $person['last_name']) . ' — Profi
     </div>
 
     <div class="card">
-        <div class="card-title">Recent Results (Our Races)</div>
+        <div class="card-title">Recent Race Results</div>
         <?php if (empty($recentResults)): ?>
         <div class="empty-state"><p>No results yet.</p></div>
         <?php else: ?>
@@ -111,7 +102,7 @@ $pageTitle = h($person['first_name'] . ' ' . $person['last_name']) . ' — Profi
             <?php foreach ($recentResults as $r): ?>
             <tr class="clickable-row" data-href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$r['race_id'] ?>">
                 <td class="text-muted"><?= h((string)$r['year']) ?></td>
-                <td><a href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$r['race_id'] ?>"><?= h($r['race_name']) ?> Rd <?= h((string)$r['round_number']) ?></a></td>
+                <td><?= h($r['race_name']) ?></td>
                 <td class="text-muted"><?= $r['grid_position'] ? 'P' . h((string)$r['grid_position']) : '—' ?></td>
                 <td>
                     <?php if ($r['finish_position']): ?>

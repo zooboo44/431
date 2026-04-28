@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Circuits';
 require_once __DIR__ . '/../includes/header.php';
-requireRole('team_manager', 'engineer', 'driver', 'media', 'fan', 'race_director', 'admin');
+requireRole('race_director', 'admin');
 
 $db = getDB();
 $stmt = $db->prepare("
@@ -56,9 +56,7 @@ renderFlash();
             </td>
             <td><?= h(number_format($c['length_km'], 3)) ?> km</td>
             <td><?= h((string)$c['number_of_laps']) ?></td>
-            <td class="mono text-success">
-                <?= $c['lap_record_ms'] ? h(formatLapTime($c['lap_record_ms'])) : '—' ?>
-            </td>
+            <td class="mono text-success"><?= $c['lap_record_ms'] ? h(formatLapTime($c['lap_record_ms'])) : '—' ?></td>
             <td class="text-muted"><?= $c['lap_record_holder'] ? h($c['lap_record_holder']) : '—' ?></td>
         </tr>
         <?php endforeach; ?>

@@ -57,9 +57,9 @@ renderFlash();
             </tr></thead>
             <tbody>
             <?php foreach ($upcomingRaces as $r): ?>
-            <tr class="clickable-row" data-href="<?= APP_URL ?>/race_director/results.php?race_id=<?= (int)$r['id'] ?>">
+            <tr class="clickable-row" data-href="<?= APP_URL ?>/race_director/race_entries.php?race_id=<?= (int)$r['id'] ?>">
                 <td><span class="round-chip"><?= h((string)$r['round_number']) ?></span></td>
-                <td><strong><?= h($r['name']) ?></strong></td>
+                <td><a href="<?= APP_URL ?>/race_director/race_entries.php?race_id=<?= (int)$r['id'] ?>" style="font-weight:600"><?= h($r['name']) ?></a></td>
                 <td class="text-muted"><?= h($r['circuit']) ?></td>
                 <td class="text-muted"><?= h(date('d M Y', strtotime($r['race_date']))) ?></td>
                 <td><?= $r['has_sprint'] ? '<span class="status-badge status-in_progress">Yes</span>' : '—' ?></td>
@@ -87,9 +87,9 @@ renderFlash();
             </tr></thead>
             <tbody>
             <?php foreach ($completedRaces as $r): ?>
-            <tr class="clickable-row" data-href="<?= APP_URL ?>/race_director/results.php?race_id=<?= (int)$r['id'] ?>">
+            <tr class="clickable-row" data-href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$r['id'] ?>">
                 <td><span class="round-chip"><?= h((string)$r['round_number']) ?></span></td>
-                <td><strong><?= h($r['name']) ?></strong><div class="text-muted" style="font-size:0.8rem"><?= h(date('d M Y', strtotime($r['race_date']))) ?></div></td>
+                <td><a href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$r['id'] ?>" style="font-weight:600"><?= h($r['name']) ?></a><div class="text-muted" style="font-size:0.8rem"><?= h(date('d M Y', strtotime($r['race_date']))) ?></div></td>
                 <td><?= $r['entry_count'] > 0 ? '<span class="text-success">'.$r['entry_count'].'</span>' : '<span class="text-muted">0</span>' ?></td>
                 <td><?= $r['qual_count'] > 0 ? '<span class="text-success">'.$r['qual_count'].'</span>' : '<span class="text-muted">0</span>' ?></td>
                 <td><?= $r['result_count'] > 0 ? '<span class="text-success">'.$r['result_count'].'</span>' : '<span class="text-muted">0</span>' ?></td>

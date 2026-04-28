@@ -46,10 +46,9 @@ switch ($role) {
             ['href' => APP_URL . '/race_director/results.php',       'label' => 'Race Results',  'icon' => '&#127937;'],
             ['href' => APP_URL . '/race_director/sprint.php',        'label' => 'Sprint Results','icon' => '&#9889;'],
             ['href' => APP_URL . '/race_director/penalties.php',     'label' => 'Penalties',     'icon' => '&#9888;'],
-            ['href' => APP_URL . '/admin/standings.php',             'label' => 'Standings',     'icon' => '&#127942;'],
-            ['href' => APP_URL . '/admin/teams.php',                 'label' => 'Teams',         'icon' => '&#127937;'],
-            ['href' => APP_URL . '/admin/people.php',                'label' => 'Drivers',       'icon' => '&#128100;'],
-            ['href' => APP_URL . '/admin/circuits.php',              'label' => 'Circuits',      'icon' => '&#9940;'],
+            ['href' => APP_URL . '/shared/standings.php',            'label' => 'Standings',     'icon' => '&#127942;'],
+            ['href' => APP_URL . '/shared/results.php',              'label' => 'Results',       'icon' => '&#9989;'],
+            ['href' => APP_URL . '/race_director/circuits.php',      'label' => 'Circuits',      'icon' => '&#9940;'],
         ];
         break;
     case 'team_manager':
@@ -57,8 +56,8 @@ switch ($role) {
             ['href' => APP_URL . '/team_manager/dashboard.php',     'label' => 'Dashboard',   'icon' => '&#9776;'],
             ['href' => APP_URL . '/team_manager/drivers.php',       'label' => 'Drivers',      'icon' => '&#128100;'],
             ['href' => APP_URL . '/team_manager/results.php',       'label' => 'Results',      'icon' => '&#127937;'],
-            ['href' => APP_URL . '/team_manager/telemetry.php',     'label' => 'Telemetry',    'icon' => '&#128200;'],
-            ['href' => APP_URL . '/team_manager/pitstops.php',      'label' => 'Pit Stops',    'icon' => '&#128295;'],
+            ['href' => APP_URL . '/team_manager/race_data.php',     'label' => 'Race Data',    'icon' => '&#128200;'],
+            ['href' => APP_URL . '/team_manager/circuits.php',      'label' => 'Circuits',     'icon' => '&#9940;'],
             ['href' => APP_URL . '/shared/standings.php',           'label' => 'Standings',    'icon' => '&#127942;'],
         ];
         break;
@@ -66,9 +65,7 @@ switch ($role) {
         $navItems = [
             ['href' => APP_URL . '/engineer/dashboard.php',      'label' => 'Dashboard',    'icon' => '&#9776;'],
             ['href' => APP_URL . '/engineer/telemetry.php',      'label' => 'Telemetry',    'icon' => '&#128200;'],
-            ['href' => APP_URL . '/engineer/telemetry_add.php',  'label' => 'Add Telemetry','icon' => '&#43;'],
             ['href' => APP_URL . '/engineer/pitstops.php',       'label' => 'Pit Stops',    'icon' => '&#128295;'],
-            ['href' => APP_URL . '/engineer/pitstops_add.php',   'label' => 'Add Pit Stop', 'icon' => '&#43;'],
         ];
         break;
     case 'driver':
@@ -80,10 +77,11 @@ switch ($role) {
         break;
     case 'media':
         $navItems = [
-            ['href' => APP_URL . '/media/dashboard.php',      'label' => 'Dashboard',   'icon' => '&#9776;'],
-            ['href' => APP_URL . '/shared/results.php',       'label' => 'Results',      'icon' => '&#127937;'],
-            ['href' => APP_URL . '/shared/standings.php',     'label' => 'Standings',    'icon' => '&#127942;'],
-            ['href' => APP_URL . '/shared/circuits.php',      'label' => 'Circuits',     'icon' => '&#9940;'],
+            ['href' => APP_URL . '/media/dashboard.php',        'label' => 'Dashboard',   'icon' => '&#9776;'],
+            ['href' => APP_URL . '/shared/results.php',         'label' => 'Results',      'icon' => '&#127937;'],
+            ['href' => APP_URL . '/shared/standings.php',       'label' => 'Standings',    'icon' => '&#127942;'],
+            ['href' => APP_URL . '/media/season_detail.php',    'label' => 'Seasons',      'icon' => '&#128197;'],
+            ['href' => APP_URL . '/shared/circuits.php',        'label' => 'Circuits',     'icon' => '&#9940;'],
         ];
         break;
     case 'fan':

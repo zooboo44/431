@@ -13,7 +13,7 @@ startSecureSession();
 // Already logged in
 if (!empty($_SESSION['user_id'])) {
     $role = $_SESSION['role'] ?? 'fan';
-    $dest = ROLE_DASHBOARDS[$role] ?? APP_URL . '/public/standings.php';
+    $dest = ROLE_DASHBOARDS[$role] ?? APP_URL . '/shared/standings.php';
     header('Location: ' . $dest);
     exit;
 }
@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($redirect && str_starts_with($redirect, '/f1app/')) {
                     header('Location: http://localhost' . $redirect);
                 } else {
-                    $dest = ROLE_DASHBOARDS[$user['role']] ?? APP_URL . '/public/standings.php';
+                    $dest = ROLE_DASHBOARDS[$user['role']] ?? APP_URL . '/shared/standings.php';
                     header('Location: ' . $dest);
                 }
                 exit;

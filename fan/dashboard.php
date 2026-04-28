@@ -17,8 +17,8 @@ foreach ($seasons as $s) { if ($s['id'] == $selectedSeasonId) { $selectedYear = 
 $driverStandings = [];
 if ($selectedSeasonId) {
     $stmt = $db->prepare("
-        SELECT ds.position, p.racing_number, p.first_name, p.last_name, p.nationality,
-               t.name AS team_name, ds.points, ds.wins, ds.podiums, ds.fastest_laps, ds.dnfs
+        SELECT ds.position, p.id AS person_id, p.racing_number, p.first_name, p.last_name, p.nationality,
+               t.id AS team_id, t.name AS team_name, ds.points, ds.wins, ds.podiums, ds.fastest_laps, ds.dnfs
         FROM driver_standings ds
         JOIN people p ON p.id = ds.person_id
         JOIN driver_seasons drs ON drs.person_id = p.id AND drs.season_id = ds.season_id
@@ -35,7 +35,7 @@ if ($selectedSeasonId) {
 $constructorStandings = [];
 if ($selectedSeasonId) {
     $stmt = $db->prepare("
-        SELECT cs.position, t.name AS team_name, cs.points, cs.wins
+        SELECT cs.position, t.id AS team_id, t.name AS team_name, cs.points, cs.wins
         FROM constructor_standings cs
         JOIN teams t ON t.id = cs.team_id
         WHERE cs.season_id = ?
@@ -114,8 +114,8 @@ $circuits = $db->query("SELECT id, name, city, country, length_km, number_of_lap
                     <span class="position-badge pos-<?= $ds['position'] ?>"><?= h((string)$ds['position']) ?></span>
                     <?php else: ?><span class="text-muted">P<?= h((string)$ds['position']) ?></span><?php endif; ?>
                 </td>
-                <td><strong>#<?= h((string)$ds['racing_number']) ?> <?= h($ds['first_name'] . ' ' . $ds['last_name']) ?></strong></td>
-                <td class="text-muted"><?= h($ds['team_name']) ?></td>
+                <td><a href="<?= APP_URL ?>/shared/driver_detail.php?id=<?= (int)$ds['person_id'] ?>" style="font-weight:600">#<?= h((string)$ds['racing_number']) ?> <?= h($ds['first_name'] . ' ' . $ds['last_name']) ?></a></td>
+                <td><a href="<?= APP_URL ?>/shared/team_detail.php?id=<?= (int)$ds['team_id'] ?>" class="text-muted"><?= h($ds['team_name']) ?></a></td>
                 <td class="text-accent fw-bold"><?= h(number_format((float)$ds['points'], 1)) ?></td>
                 <td><?= h((string)$ds['wins']) ?></td>
             </tr>
@@ -140,7 +140,7 @@ $circuits = $db->query("SELECT id, name, city, country, length_km, number_of_lap
                     <span class="position-badge pos-<?= $cs['position'] ?>"><?= h((string)$cs['position']) ?></span>
                     <?php else: ?><span class="text-muted">P<?= h((string)$cs['position']) ?></span><?php endif; ?>
                 </td>
-                <td><strong><?= h($cs['team_name']) ?></strong></td>
+                <td><a href="<?= APP_URL ?>/shared/team_detail.php?id=<?= (int)$cs['team_id'] ?>" style="font-weight:600"><?= h($cs['team_name']) ?></a></td>
                 <td class="text-accent fw-bold"><?= h(number_format((float)$cs['points'], 1)) ?></td>
                 <td><?= h((string)$cs['wins']) ?></td>
             </tr>
@@ -159,12 +159,12 @@ $circuits = $db->query("SELECT id, name, city, country, length_km, number_of_lap
         <thead><tr><th>Rd</th><th>Race</th><th>Circuit</th><th>Date</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($recentRaces as $r): ?>
-        <tr class="clickable-row" data-href="<?= APP_URL ?>/public/race_detail.php?id=<?= (int)$r['id'] ?>">
+        <tr class="clickable-row" data-href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$r['id'] ?>">
             <td><span class="round-chip"><?= h((string)$r['round_number']) ?></span></td>
             <td><strong><?= h($r['name']) ?></strong></td>
             <td class="text-muted"><?= h($r['circuit_name']) ?></td>
             <td class="text-muted"><?= h(date('d M Y', strtotime($r['race_date']))) ?></td>
-            <td class="no-row-click"><a href="<?= APP_URL ?>/public/race_detail.php?id=<?= (int)$r['id'] ?>" class="btn btn-outline btn-sm">View &rarr;</a></td>
+            <td class="no-row-click"><a href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$r['id'] ?>" class="btn btn-outline btn-sm">View &rarr;</a></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
@@ -211,7 +211,7 @@ $circuits = $db->query("SELECT id, name, city, country, length_km, number_of_lap
             <tr><td colspan="5" class="text-center text-muted" style="padding:2rem">No circuits found.</td></tr>
             <?php else: ?>
             <?php foreach ($circuits as $c): ?>
-            <tr>
+            <tr class="clickable-row" data-href="<?= APP_URL ?>/shared/circuit_detail.php?id=<?= (int)$c['id'] ?>">
                 <td><strong><?= h($c['name']) ?></strong></td>
                 <td class="text-muted"><?= h($c['city']) ?></td>
                 <td class="text-muted"><?= h($c['country']) ?></td>

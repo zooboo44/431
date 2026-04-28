@@ -7,6 +7,36 @@ $db     = getDB();
 $errors = [];
 $raceId = intval($_GET['race_id'] ?? 0);
 
+if (!$raceId) {
+    $activeSeason = getActiveSeason();
+    $seasonId = $activeSeason['id'] ?? null;
+    $raceList = [];
+    if ($seasonId) {
+        $rlStmt = $db->prepare("SELECT r.id, r.name, r.round_number, r.race_date, r.status FROM races r WHERE r.season_id = ? ORDER BY r.round_number ASC");
+        $rlStmt->execute([$seasonId]);
+        $raceList = $rlStmt->fetchAll();
+    }
+    $pageTitle = 'Qualifying — Select Race';
+    renderFlash();
+    echo '<div class="page-header"><div><h1 class="page-title">Qualifying Results</h1><p class="page-subtitle">Select a race to manage qualifying</p></div></div>';
+    echo '<div class="card"><div class="card-title">&#9201; ' . h((string)($activeSeason['year'] ?? '')) . ' Races</div>';
+    if (empty($raceList)) { echo '<div class="empty-state"><p>No races found for the active season.</p></div>'; }
+    else {
+        echo '<div class="table-container" style="border:0;margin:0"><table><thead><tr><th>Rd</th><th>Race</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody>';
+        foreach ($raceList as $rl) {
+            echo '<tr><td><span class="round-chip">' . h((string)$rl['round_number']) . '</span></td>'
+               . '<td><strong>' . h($rl['name']) . '</strong></td>'
+               . '<td class="text-muted">' . h(date('d M Y', strtotime($rl['race_date']))) . '</td>'
+               . '<td><span class="status-badge status-' . h($rl['status']) . '">' . h($rl['status']) . '</span></td>'
+               . '<td><a href="' . APP_URL . '/race_director/qualifying.php?race_id=' . (int)$rl['id'] . '" class="btn btn-primary btn-sm">Manage Qualifying</a></td></tr>';
+        }
+        echo '</tbody></table></div>';
+    }
+    echo '</div>';
+    require_once __DIR__ . '/../includes/footer.php';
+    exit;
+}
+
 $stmt = $db->prepare("SELECT r.*, c.name AS circuit FROM races r JOIN circuits c ON c.id=r.circuit_id WHERE r.id=?");
 $stmt->execute([$raceId]);
 $race = $stmt->fetch();

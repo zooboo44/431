@@ -9,7 +9,7 @@ $stmt = $db->prepare("
     SELECT u.*, cb.name AS created_by_name
     FROM users u
     LEFT JOIN users cb ON cb.id = u.created_by
-    ORDER BY u.created_at DESC
+    ORDER BY FIELD(u.role,'admin','race_director','team_manager','engineer','driver','media','fan'), u.name ASC
 ");
 $stmt->execute();
 $users = $stmt->fetchAll();

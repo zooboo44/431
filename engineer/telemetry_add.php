@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_telemetry'])) {
                     "Entry: $entryId Lap: $lapNum");
                 rotateCSRFToken();
                 redirectWithMessage(
-                    APP_URL . '/engineer/telemetry.php?race_id=' . $raceId . '&person_id=' . $personId,
+                    APP_URL . '/engineer/telemetry.php',
                     'success', 'Lap telemetry saved.'
                 );
             }

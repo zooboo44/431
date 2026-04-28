@@ -19,8 +19,8 @@ foreach ($seasons as $s) { if ($s['id'] == $selectedSeasonId) { $selectedYear = 
 $driverStandings = [];
 if ($selectedSeasonId) {
     $stmt = $db->prepare("
-        SELECT ds.position, p.racing_number, p.first_name, p.last_name, p.nationality,
-               t.name AS team_name, ds.points, ds.wins, ds.podiums, ds.fastest_laps, ds.dnfs
+        SELECT ds.position, p.id AS person_id, p.racing_number, p.first_name, p.last_name, p.nationality,
+               t.id AS team_id, t.name AS team_name, ds.points, ds.wins, ds.podiums, ds.fastest_laps, ds.dnfs
         FROM driver_standings ds
         JOIN people p ON p.id = ds.person_id
         JOIN driver_seasons drs ON drs.person_id = p.id AND drs.season_id = ds.season_id
@@ -37,7 +37,7 @@ if ($selectedSeasonId) {
 $constructorStandings = [];
 if ($selectedSeasonId) {
     $stmt = $db->prepare("
-        SELECT cs.position, t.name AS team_name, cs.points, cs.wins
+        SELECT cs.position, t.id AS team_id, t.name AS team_name, cs.points, cs.wins
         FROM constructor_standings cs
         JOIN teams t ON t.id = cs.team_id
         WHERE cs.season_id = ?
@@ -117,7 +117,7 @@ if ($selectedSeasonId) {
     <div class="card">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
             <span>Driver Championship</span>
-            <a href="<?= APP_URL ?>/public/standings.php?season=<?= $selectedSeasonId ?>" class="btn btn-outline btn-sm">Full Standings</a>
+            <a href="<?= APP_URL ?>/shared/standings.php?season=<?= $selectedSeasonId ?>" class="btn btn-outline btn-sm">Full Standings</a>
         </div>
         <?php if (empty($driverStandings)): ?>
         <div class="empty-state"><p>No standings yet.</p></div>
@@ -135,10 +135,10 @@ if ($selectedSeasonId) {
                     <?php endif; ?>
                 </td>
                 <td>
-                    <strong>#<?= h((string)$ds['racing_number']) ?> <?= h($ds['first_name'] . ' ' . $ds['last_name']) ?></strong>
+                    <a href="<?= APP_URL ?>/shared/driver_detail.php?id=<?= (int)$ds['person_id'] ?>" style="font-weight:600">#<?= h((string)$ds['racing_number']) ?> <?= h($ds['first_name'] . ' ' . $ds['last_name']) ?></a>
                     <div class="text-muted" style="font-size:0.75rem"><?= h($ds['nationality']) ?></div>
                 </td>
-                <td class="text-muted"><?= h($ds['team_name']) ?></td>
+                <td><a href="<?= APP_URL ?>/shared/team_detail.php?id=<?= (int)$ds['team_id'] ?>" class="text-muted"><?= h($ds['team_name']) ?></a></td>
                 <td class="text-accent fw-bold"><?= h(number_format((float)$ds['points'], 1)) ?></td>
                 <td><?= h((string)$ds['wins']) ?></td>
             </tr>
@@ -166,7 +166,7 @@ if ($selectedSeasonId) {
                     <span class="text-muted">P<?= h((string)$cs['position']) ?></span>
                     <?php endif; ?>
                 </td>
-                <td><strong><?= h($cs['team_name']) ?></strong></td>
+                <td><a href="<?= APP_URL ?>/shared/team_detail.php?id=<?= (int)$cs['team_id'] ?>" style="font-weight:600"><?= h($cs['team_name']) ?></a></td>
                 <td class="text-accent fw-bold"><?= h(number_format((float)$cs['points'], 1)) ?></td>
                 <td><?= h((string)$cs['wins']) ?></td>
             </tr>
@@ -186,7 +186,7 @@ if ($selectedSeasonId) {
         <span>Rd <?= h((string)$race['round_number']) ?> — <?= h($race['name']) ?></span>
         <div style="display:flex;gap:0.5rem;align-items:center">
             <span class="text-muted" style="font-size:0.8rem"><?= h(date('d M Y', strtotime($race['race_date']))) ?></span>
-            <a href="<?= APP_URL ?>/public/race_detail.php?id=<?= h((string)$race['id']) ?>" class="btn btn-outline btn-sm">Full Results</a>
+            <a href="<?= APP_URL ?>/shared/race_detail.php?id=<?= h((string)$race['id']) ?>" class="btn btn-outline btn-sm">Full Results</a>
         </div>
     </div>
     <?php if (!empty($raceTopFive[$race['id']])): ?>

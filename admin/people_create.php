@@ -76,20 +76,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 logAudit($_SESSION['user_id'], 'create', 'people', $newId, "$firstName $lastName #$number");
 
                 if ($regSeasonId && $regTeamSeasonId) {
-                    // Check driver limit (max 2 active per team per season)
-                    $drChk = $db->prepare("SELECT COUNT(*) FROM driver_seasons WHERE team_season_id=? AND status='active'");
-                    $drChk->execute([$regTeamSeasonId]);
-                    if ((int)$drChk->fetchColumn() >= 2) {
-                        $errors[] = 'This team already has 2 active drivers for that season.';
-                        $db->rollBack();
-                    } else {
-                        $db->prepare("INSERT INTO driver_seasons (person_id, team_season_id, season_id, joined_round, status) VALUES (?,?,?,1,'active')")
-                           ->execute([$newId, $regTeamSeasonId, $regSeasonId]);
-                        logAudit($_SESSION['user_id'], 'create', 'driver_seasons', null, "Person $newId → TeamSeason $regTeamSeasonId Season $regSeasonId");
-                        $db->commit();
-                        rotateCSRFToken();
-                        redirectWithMessage(APP_URL . '/admin/person_detail.php?id=' . $newId, 'success', "Driver '{$firstName} {$lastName}' created and registered.");
-                    }
+                    // New drivers always start inactive; admin can activate via toggle
+                    $db->prepare("INSERT INTO driver_seasons (person_id, team_season_id, season_id, joined_round, status) VALUES (?,?,?,1,'inactive')")
+                       ->execute([$newId, $regTeamSeasonId, $regSeasonId]);
+                    logAudit($_SESSION['user_id'], 'create', 'driver_seasons', null, "Person $newId → TeamSeason $regTeamSeasonId Season $regSeasonId");
+                    $db->commit();
+                    rotateCSRFToken();
+                    redirectWithMessage(APP_URL . '/admin/person_detail.php?id=' . $newId, 'success', "Driver '{$firstName} {$lastName}' created and registered (inactive).");
                 } else {
                     $db->commit();
                     rotateCSRFToken();

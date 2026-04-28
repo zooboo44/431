@@ -15,7 +15,7 @@ if (!$selectedSeasonId) {
 
 // IDOR: always filter by teamId in the query
 $stmt = $db->prepare("
-    SELECT r.name AS race_name, r.round_number, r.race_date, s.year,
+    SELECT r.id AS race_id, r.name AS race_name, r.round_number, r.race_date, s.year,
            p.id AS person_id, p.first_name, p.last_name, p.racing_number,
            rr.finish_position, rr.start_position, rr.points_scored, rr.status, rr.fastest_lap_bonus,
            rr.laps_completed, qr.grid_position
@@ -70,7 +70,7 @@ foreach ($seasons as $s) { if ($s['id'] == $selectedSeasonId) { $selectedYear = 
         <?php foreach ($results as $r): ?>
         <tr>
             <td><span class="round-chip"><?= h((string)$r['round_number']) ?></span></td>
-            <td><?= h($r['race_name']) ?></td>
+            <td><a href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$r['race_id'] ?>"><?= h($r['race_name']) ?></a></td>
             <td><a href="<?= APP_URL ?>/team_manager/driver_profile.php?person_id=<?= (int)$r['person_id'] ?>" style="font-weight:600">#<?= h((string)$r['racing_number']) ?> <?= h($r['first_name'] . ' ' . $r['last_name']) ?></a></td>
             <td class="text-muted"><?= $r['grid_position'] ? 'P' . h((string)$r['grid_position']) : '—' ?></td>
             <td class="text-muted"><?= 'P' . h((string)$r['start_position']) ?></td>
