@@ -813,3 +813,11 @@ textarea.form-control {
     color: #7ab3ff;
     margin-bottom: 1rem;
 }
+
+/* Password strength feedback */
+.pw-feedback { font-size: 0.78rem; margin-top: 0.3rem; min-height: 1.2em; }
+.pw-feedback.pw-ok  { color: #4caf50; }
+.pw-feedback.pw-err { color: var(--danger, #e53935); }
+.pw-feedback.pw-err span { display: inline-block; margin-right: 0.25rem; }
+.pw-feedback.pw-err span::after { content: ' ·'; }
+.pw-feedback.pw-err span:last-child::after { content: ''; }

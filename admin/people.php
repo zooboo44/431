@@ -7,19 +7,18 @@ $isAdmin = ($_SESSION['role'] ?? '') === 'admin';
 $db = getDB();
 $errors = [];
 
-// Handle pending driver approval / rejection
+// ─── PENDING DRIVER APPROVAL / REJECTION ─────────────────────────────────────
 if ($isAdmin && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
         $errors[] = 'Invalid request token.';
     } else {
         $personId = intval($_POST['person_id'] ?? 0);
 
+        // APPROVE DRIVER
         if (isset($_POST['approve_driver']) && $personId) {
             $tempPassword = trim($_POST['temp_password'] ?? '');
-            $driverName   = trim($_POST['driver_name'] ?? '');
             $driverEmail  = trim($_POST['driver_email'] ?? '');
 
-            if (!$tempPassword)   $errors[] = 'Temporary password is required.';
             if (!$driverEmail)    $errors[] = 'Driver email is required.';
             if (!filter_var($driverEmail, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email address.';
             $passErr = validatePassword($tempPassword);
@@ -32,20 +31,22 @@ if ($isAdmin && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$person) {
                     $errors[] = 'Pending driver not found.';
                 } else {
+                    // Check email uniqueness
+                    $eChk = $db->prepare('SELECT id FROM users WHERE email = ?');
+                    $eChk->execute([$driverEmail]);
+                    if ($eChk->fetch()) $errors[] = 'That email address is already in use.';
+                }
+                if (empty($errors)) {
                     $db->beginTransaction();
                     try {
                         $requestingTeamId = (int)$person['requested_by_team_id'];
-
-                        // Activate person and clear pending flag
                         $db->prepare('UPDATE people SET is_active = 1, requested_by_team_id = NULL WHERE id = ?')->execute([$personId]);
 
-                        // Create user account
-                        $hash = password_hash($tempPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+                        $hash     = password_hash($tempPassword, PASSWORD_BCRYPT, ['cost' => 12]);
                         $fullName = $person['first_name'] . ' ' . $person['last_name'];
                         $db->prepare("INSERT INTO users (name, email, password_hash, role, linked_id, is_active, must_change_password, created_by) VALUES (?,?,?,'driver',?,1,1,?)")
                            ->execute([$fullName, $driverEmail, $hash, $personId, $_SESSION['user_id']]);
 
-                        // Create driver_seasons entry for requesting team in the active season
                         $activeSeason = getActiveSeason();
                         if ($activeSeason && $requestingTeamId) {
                             $tsStmt = $db->prepare('SELECT id FROM team_seasons WHERE team_id = ? AND season_id = ?');
@@ -56,11 +57,10 @@ if ($isAdmin && $_SERVER['REQUEST_METHOD'] === 'POST') {
                                    ->execute([$personId, $ts['id'], $activeSeason['id']]);
                             }
                         }
-
                         $db->commit();
-                        logAudit($_SESSION['user_id'], 'approve', 'people', $personId, "Approved pending driver: $fullName, created user account");
+                        logAudit($_SESSION['user_id'], 'approve', 'people', $personId, "Approved pending driver: $fullName");
                         rotateCSRFToken();
-                        redirectWithMessage(APP_URL . '/admin/people.php', 'success', "Driver '$fullName' approved. User account created (must change password on first login).");
+                        redirectWithMessage(APP_URL . '/admin/people.php', 'success', "Driver '$fullName' approved. Account created (must change password on first login).");
                     } catch (\PDOException $e) {
                         $db->rollBack();
                         $errors[] = 'Approval failed: ' . $e->getMessage();
@@ -69,6 +69,7 @@ if ($isAdmin && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // REJECT DRIVER
         if (isset($_POST['reject_driver']) && $personId) {
             $stmt = $db->prepare('SELECT first_name, last_name FROM people WHERE id = ? AND requested_by_team_id IS NOT NULL');
             $stmt->execute([$personId]);
@@ -78,13 +79,68 @@ if ($isAdmin && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 logAudit($_SESSION['user_id'], 'delete', 'people', $personId, "Rejected pending driver: {$person['first_name']} {$person['last_name']}");
                 rotateCSRFToken();
                 redirectWithMessage(APP_URL . '/admin/people.php', 'success', "Driver request for '{$person['first_name']} {$person['last_name']}' rejected and removed.");
+            } else {
+                $errors[] = 'Pending driver not found.';
+            }
+        }
+
+        // APPROVE ENGINEER
+        if (isset($_POST['approve_engineer'])) {
+            $reqId       = intval($_POST['req_id'] ?? 0);
+            $engEmail    = trim($_POST['eng_email'] ?? '');
+            $engPassword = trim($_POST['eng_password'] ?? '');
+
+            if (!$engEmail)   $errors[] = 'Engineer email is required.';
+            if (!filter_var($engEmail, FILTER_VALIDATE_EMAIL)) $errors[] = 'Invalid email address.';
+            $passErr = validatePassword($engPassword);
+            if ($passErr) $errors[] = $passErr;
+
+            if (empty($errors)) {
+                $req = $db->prepare('SELECT * FROM engineer_requests WHERE id = ?');
+                $req->execute([$reqId]);
+                $request = $req->fetch();
+                if (!$request) {
+                    $errors[] = 'Engineer request not found.';
+                } else {
+                    $eChk = $db->prepare('SELECT id FROM users WHERE email = ?');
+                    $eChk->execute([$engEmail]);
+                    if ($eChk->fetch()) $errors[] = 'That email address is already in use.';
+                }
+                if (empty($errors)) {
+                    $hash     = password_hash($engPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+                    $fullName = $request['first_name'] . ' ' . $request['last_name'];
+                    $teamId   = (int)$request['requested_by_team_id'];
+                    $db->prepare("INSERT INTO users (name, email, password_hash, role, linked_id, is_active, must_change_password, created_by) VALUES (?,?,?,'engineer',?,1,1,?)")
+                       ->execute([$fullName, $engEmail, $hash, $teamId, $_SESSION['user_id']]);
+                    $db->prepare('DELETE FROM engineer_requests WHERE id = ?')->execute([$reqId]);
+                    logAudit($_SESSION['user_id'], 'approve', 'engineer_requests', $reqId, "Approved engineer: $fullName for team $teamId");
+                    rotateCSRFToken();
+                    redirectWithMessage(APP_URL . '/admin/people.php', 'success', "Engineer '$fullName' approved. Account created (must change password on first login).");
+                }
+            }
+        }
+
+        // REJECT ENGINEER
+        if (isset($_POST['reject_engineer'])) {
+            $reqId = intval($_POST['req_id'] ?? 0);
+            $req   = $db->prepare('SELECT first_name, last_name FROM engineer_requests WHERE id = ?');
+            $req->execute([$reqId]);
+            $request = $req->fetch();
+            if ($request) {
+                $db->prepare('DELETE FROM engineer_requests WHERE id = ?')->execute([$reqId]);
+                logAudit($_SESSION['user_id'], 'delete', 'engineer_requests', $reqId, "Rejected engineer: {$request['first_name']} {$request['last_name']}");
+                rotateCSRFToken();
+                redirectWithMessage(APP_URL . '/admin/people.php', 'success', "Engineer request for '{$request['first_name']} {$request['last_name']}' rejected.");
+            } else {
+                $errors[] = 'Engineer request not found.';
             }
         }
     }
 }
 
-// Pending driver requests
+// ─── DATA FETCH ───────────────────────────────────────────────────────────────
 $pendingDrivers = [];
+$pendingEngineers = [];
 if ($isAdmin) {
     $stmt = $db->prepare("
         SELECT p.*, t.name AS requesting_team
@@ -95,6 +151,18 @@ if ($isAdmin) {
     ");
     $stmt->execute();
     $pendingDrivers = $stmt->fetchAll();
+
+    // Check engineer_requests table exists before querying
+    try {
+        $erStmt = $db->prepare("
+            SELECT er.*, t.name AS requesting_team
+            FROM engineer_requests er
+            JOIN teams t ON t.id = er.requested_by_team_id
+            ORDER BY er.created_at ASC
+        ");
+        $erStmt->execute();
+        $pendingEngineers = $erStmt->fetchAll();
+    } catch (\PDOException $e) { /* table may not exist yet */ }
 }
 
 $stmt = $db->query("
@@ -117,48 +185,101 @@ renderFlash();
 
 <?php foreach ($errors as $err): ?><div class="alert alert-danger"><?= h($err) ?></div><?php endforeach; ?>
 
-<?php if ($isAdmin && !empty($pendingDrivers)): ?>
+<?php if ($isAdmin && (!empty($pendingDrivers) || !empty($pendingEngineers))): ?>
 <div class="card" style="margin-bottom:1.5rem;border:1px solid var(--warning)">
-    <div class="card-title" style="color:var(--warning)">&#9203; Pending Driver Requests (<?= count($pendingDrivers) ?>)</div>
-    <?php foreach ($pendingDrivers as $pr): ?>
-    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:0.75rem">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem">
-            <div>
-                <strong>#<?= h((string)$pr['racing_number']) ?> <?= h($pr['first_name'] . ' ' . $pr['last_name']) ?></strong>
-                <span class="status-badge status-warning" style="margin-left:0.5rem">Pending</span>
-                <div class="text-muted" style="font-size:0.8rem;margin-top:0.2rem">
-                    <?= h($pr['nationality']) ?> &bull; Born <?= h(date('d M Y', strtotime($pr['date_of_birth']))) ?>
-                    &bull; Requested by <strong><?= h($pr['requesting_team'] ?? 'Unknown') ?></strong>
-                    &bull; <?= h(date('d M Y', strtotime($pr['created_at']))) ?>
+    <div class="card-title" style="color:var(--warning)">&#9203; Pending Requests (<?= count($pendingDrivers) + count($pendingEngineers) ?>)</div>
+
+    <?php if (!empty($pendingDrivers)): ?>
+    <div style="margin-bottom:1rem">
+        <div style="font-size:0.85rem;font-weight:600;color:var(--text-muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em">Driver Requests (<?= count($pendingDrivers) ?>)</div>
+        <?php foreach ($pendingDrivers as $pr): ?>
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:0.75rem">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem">
+                <div>
+                    <strong>#<?= h((string)$pr['racing_number']) ?> <?= h($pr['first_name'] . ' ' . $pr['last_name']) ?></strong>
+                    <span class="status-badge status-warning" style="margin-left:0.5rem">Pending</span>
+                    <div class="text-muted" style="font-size:0.8rem;margin-top:0.2rem">
+                        <?= h($pr['nationality']) ?> &bull; Born <?= h(date('d M Y', strtotime($pr['date_of_birth']))) ?>
+                        &bull; Requested by <strong><?= h($pr['requesting_team'] ?? 'Unknown') ?></strong>
+                        &bull; <?= h(date('d M Y', strtotime($pr['created_at']))) ?>
+                    </div>
                 </div>
             </div>
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:0.75rem;align-items:flex-end">
+                <form method="post" style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
+                    <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
+                    <input type="hidden" name="person_id" value="<?= (int)$pr['id'] ?>">
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label" style="font-size:0.75rem">Driver Email</label>
+                        <input type="email" name="driver_email" class="form-control" style="padding:0.3rem 0.5rem;width:200px" required placeholder="driver@example.com">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label" style="font-size:0.75rem">Password</label>
+                        <input type="text" name="temp_password" class="form-control" id="dpw<?= (int)$pr['id'] ?>"
+                               data-pw-validate="dpwfb<?= (int)$pr['id'] ?>"
+                               style="padding:0.3rem 0.5rem;width:180px" required
+                               placeholder="Min 8, A-Z, a-z, 0-9, !@#$%^&*">
+                        <div id="dpwfb<?= (int)$pr['id'] ?>" class="pw-feedback"></div>
+                    </div>
+                    <button type="submit" name="approve_driver" class="btn btn-primary btn-sm">Approve</button>
+                </form>
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
+                    <input type="hidden" name="person_id" value="<?= (int)$pr['id'] ?>">
+                    <button type="submit" name="reject_driver" class="btn btn-danger btn-sm"
+                            data-confirm="Reject and delete '<?= h($pr['first_name'] . ' ' . $pr['last_name']) ?>'?">Reject</button>
+                </form>
+            </div>
         </div>
-        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:0.75rem;align-items:flex-end">
-            <!-- Approve form -->
-            <form method="post" style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
-                <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
-                <input type="hidden" name="person_id" value="<?= (int)$pr['id'] ?>">
-                <input type="hidden" name="driver_name" value="<?= h($pr['first_name'] . ' ' . $pr['last_name']) ?>">
-                <div class="form-group" style="margin:0">
-                    <label class="form-label" style="font-size:0.75rem">Driver Email</label>
-                    <input type="email" name="driver_email" class="form-control" style="padding:0.3rem 0.5rem;width:200px" required placeholder="driver@example.com">
-                </div>
-                <div class="form-group" style="margin:0">
-                    <label class="form-label" style="font-size:0.75rem">Temp Password</label>
-                    <input type="text" name="temp_password" class="form-control" style="padding:0.3rem 0.5rem;width:160px" required placeholder="Min 8 chars">
-                </div>
-                <button type="submit" name="approve_driver" class="btn btn-primary btn-sm" data-confirm="Approve '<?= h($pr['first_name'] . ' ' . $pr['last_name']) ?>' and create driver account?">Approve</button>
-            </form>
-            <!-- Reject form -->
-            <form method="post">
-                <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
-                <input type="hidden" name="person_id" value="<?= (int)$pr['id'] ?>">
-                <button type="submit" name="reject_driver" class="btn btn-danger btn-sm" data-confirm="Reject and delete '<?= h($pr['first_name'] . ' ' . $pr['last_name']) ?>'?">Reject</button>
-            </form>
-        </div>
+        <?php endforeach; ?>
     </div>
-    <?php endforeach; ?>
+    <?php endif; ?>
+
+    <?php if (!empty($pendingEngineers)): ?>
+    <div>
+        <div style="font-size:0.85rem;font-weight:600;color:var(--text-muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em">Engineer Requests (<?= count($pendingEngineers) ?>)</div>
+        <?php foreach ($pendingEngineers as $er): ?>
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:0.75rem">
+            <div>
+                <strong><?= h($er['first_name'] . ' ' . $er['last_name']) ?></strong>
+                <span class="status-badge status-warning" style="margin-left:0.5rem">Pending Engineer</span>
+                <div class="text-muted" style="font-size:0.8rem;margin-top:0.2rem">
+                    Requested by <strong><?= h($er['requesting_team']) ?></strong>
+                    &bull; <?= h(date('d M Y', strtotime($er['created_at']))) ?>
+                </div>
+            </div>
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:0.75rem;align-items:flex-end">
+                <form method="post" style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
+                    <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
+                    <input type="hidden" name="req_id" value="<?= (int)$er['id'] ?>">
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label" style="font-size:0.75rem">Engineer Email</label>
+                        <input type="email" name="eng_email" class="form-control" style="padding:0.3rem 0.5rem;width:200px" required placeholder="engineer@team.f1">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label" style="font-size:0.75rem">Password</label>
+                        <input type="text" name="eng_password" id="epw<?= (int)$er['id'] ?>"
+                               data-pw-validate="epwfb<?= (int)$er['id'] ?>"
+                               class="form-control" style="padding:0.3rem 0.5rem;width:180px" required
+                               placeholder="Min 8, A-Z, a-z, 0-9, !@#$%^&*">
+                        <div id="epwfb<?= (int)$er['id'] ?>" class="pw-feedback"></div>
+                    </div>
+                    <button type="submit" name="approve_engineer" class="btn btn-primary btn-sm">Approve</button>
+                </form>
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
+                    <input type="hidden" name="req_id" value="<?= (int)$er['id'] ?>">
+                    <button type="submit" name="reject_engineer" class="btn btn-danger btn-sm"
+                            data-confirm="Reject engineer request for '<?= h($er['first_name'] . ' ' . $er['last_name']) ?>'?">Reject</button>
+                </form>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 </div>
+<?php elseif ($isAdmin): ?>
+<div class="alert" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);margin-bottom:1rem;font-size:0.85rem">No pending driver or engineer requests.</div>
 <?php endif; ?>
 
 <div class="page-header">

@@ -24,6 +24,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $activeSeasonId && $currentTeamSeas
     if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
         $errors[] = 'Invalid token.';
     } else {
+        // Request a new engineer (pending approval)
+        if (isset($_POST['request_engineer'])) {
+            $engFirst = strip_tags(trim($_POST['eng_first_name'] ?? ''));
+            $engLast  = strip_tags(trim($_POST['eng_last_name'] ?? ''));
+            if (!$engFirst) $errors[] = 'Engineer first name is required.';
+            if (!$engLast)  $errors[] = 'Engineer last name is required.';
+            if (empty($errors)) {
+                try {
+                    $db->prepare("INSERT INTO engineer_requests (first_name, last_name, requested_by_team_id) VALUES (?,?,?)")
+                       ->execute([$engFirst, $engLast, $teamId]);
+                    logAudit($_SESSION['user_id'], 'create', 'engineer_requests', null, "Pending engineer: $engFirst $engLast by team $teamId");
+                    rotateCSRFToken();
+                    redirectWithMessage(APP_URL . '/team_manager/drivers.php', 'success', "Engineer request for '$engFirst $engLast' submitted. Awaiting admin approval.");
+                } catch (\PDOException $e) {
+                    $errors[] = 'Could not submit request. The engineer_requests table may not exist yet — contact admin.';
+                }
+            }
+        }
+
         // Request a new driver (pending approval)
         if (isset($_POST['request_driver'])) {
             $firstName = strip_tags(trim($_POST['first_name'] ?? ''));
@@ -183,6 +202,14 @@ $stmt = $db->prepare("SELECT id, first_name, last_name, racing_number, nationali
 $stmt->execute([$teamId]);
 $pendingRequests = $stmt->fetchAll();
 
+// Pending engineer requests for this team
+$pendingEngineerRequests = [];
+try {
+    $erStmt = $db->prepare("SELECT id, first_name, last_name, created_at FROM engineer_requests WHERE requested_by_team_id = ? ORDER BY created_at DESC");
+    $erStmt->execute([$teamId]);
+    $pendingEngineerRequests = $erStmt->fetchAll();
+} catch (\PDOException $e) { /* table may not exist yet */ }
+
 $activeCount = count(array_filter($currentRoster, fn($d) => $d['status'] === 'active'));
 $csrfToken = generateCSRFToken();
 renderFlash();
@@ -306,6 +333,41 @@ renderFlash();
             <input type="number" id="req_number" name="racing_number" class="form-control" min="1" max="99" required style="max-width:120px">
         </div>
         <button type="submit" name="request_driver" class="btn btn-primary">Submit Request</button>
+    </form>
+</div>
+
+<!-- Pending Engineer Requests -->
+<?php if (!empty($pendingEngineerRequests)): ?>
+<div class="card" style="margin-top:1.5rem">
+    <div class="card-title">&#9203; Pending Engineer Requests</div>
+    <p class="text-muted" style="font-size:0.85rem;margin-bottom:0.75rem">These requests are awaiting admin approval.</p>
+    <?php foreach ($pendingEngineerRequests as $er): ?>
+    <div style="border:1px solid var(--warning);border-radius:var(--radius);padding:0.75rem;margin-bottom:0.5rem">
+        <strong><?= h($er['first_name'] . ' ' . $er['last_name']) ?></strong>
+        <span class="status-badge status-warning" style="margin-left:0.5rem">Pending</span>
+        <span class="text-muted" style="font-size:0.78rem;margin-left:0.5rem">Submitted <?= h(date('d M Y', strtotime($er['created_at']))) ?></span>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<!-- Request New Engineer -->
+<div class="card" style="margin-top:1.5rem">
+    <div class="card-title">&#43; Request New Engineer</div>
+    <p class="text-muted" style="font-size:0.85rem;margin-bottom:1rem">Submit a request to grant engineer portal access to a team member. Admin will set up their login credentials.</p>
+    <form method="post" style="max-width:480px">
+        <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label required" for="eng_first_name">First Name</label>
+                <input type="text" id="eng_first_name" name="eng_first_name" class="form-control" required maxlength="50">
+            </div>
+            <div class="form-group">
+                <label class="form-label required" for="eng_last_name">Last Name</label>
+                <input type="text" id="eng_last_name" name="eng_last_name" class="form-control" required maxlength="50">
+            </div>
+        </div>
+        <button type="submit" name="request_engineer" class="btn btn-primary">Submit Request</button>
     </form>
 </div>
 

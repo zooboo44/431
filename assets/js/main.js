@@ -264,6 +264,38 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ============================================================ PASSWORD STRENGTH VALIDATION
+function validatePasswordLive(input, feedbackEl) {
+    const val = input.value;
+    const rules = [
+        { test: v => v.length >= 8,              msg: 'At least 8 characters' },
+        { test: v => v.length <= 25,             msg: 'No more than 25 characters' },
+        { test: v => /[A-Z]/.test(v),            msg: 'One uppercase letter' },
+        { test: v => /[a-z]/.test(v),            msg: 'One lowercase letter' },
+        { test: v => /[0-9]/.test(v),            msg: 'One number' },
+        { test: v => /[!@#$%^&*]/.test(v),       msg: 'One special character (!@#$%^&*)' },
+    ];
+    const failed = rules.filter(r => !r.test(val)).map(r => r.msg);
+    if (!feedbackEl) return failed.length === 0;
+    if (val.length === 0) { feedbackEl.textContent = ''; feedbackEl.className = 'pw-feedback'; return false; }
+    if (failed.length === 0) {
+        feedbackEl.textContent = '✓ Password meets all requirements';
+        feedbackEl.className = 'pw-feedback pw-ok';
+    } else {
+        feedbackEl.innerHTML = 'Missing: ' + failed.map(m => '<span>' + escapeHtml(m) + '</span>').join(', ');
+        feedbackEl.className = 'pw-feedback pw-err';
+    }
+    return failed.length === 0;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input[data-pw-validate]').forEach(function(input) {
+        const feedbackId = input.dataset.pwValidate;
+        const fb = feedbackId ? document.getElementById(feedbackId) : null;
+        input.addEventListener('input', () => validatePasswordLive(input, fb));
+    });
+});
+
 // ============================================================ HELPERS
 function escapeHtml(text) {
     const div = document.createElement('div');

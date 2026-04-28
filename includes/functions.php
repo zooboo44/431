@@ -213,10 +213,15 @@ function countRelated(PDO $db, string $table, string $col, int $id): int {
 }
 
 function validatePassword(string $password): ?string {
-    if (strlen($password) < 8)                    return 'Password must be at least 8 characters.';
-    if (!preg_match('/[A-Z]/', $password))         return 'Password must contain at least one uppercase letter.';
-    if (!preg_match('/[a-z]/', $password))         return 'Password must contain at least one lowercase letter.';
-    if (!preg_match('/[0-9]/', $password))         return 'Password must contain at least one number.';
-    if (!preg_match('/[^A-Za-z0-9]/', $password)) return 'Password must contain at least one special character.';
+    if (strlen($password) < 8)                          return 'Password must be at least 8 characters.';
+    if (strlen($password) > 25)                         return 'Password must be no more than 25 characters.';
+    if (!preg_match('/[A-Z]/', $password))              return 'Password must contain at least one uppercase letter.';
+    if (!preg_match('/[a-z]/', $password))              return 'Password must contain at least one lowercase letter.';
+    if (!preg_match('/[0-9]/', $password))              return 'Password must contain at least one number.';
+    if (!preg_match('/[!@#$%^&*]/', $password))         return 'Password must contain at least one special character (!@#$%^&*).';
     return null;
+}
+
+function passwordHint(): string {
+    return '8–25 characters, with uppercase, lowercase, number, and one of: !@#$%^&*';
 }

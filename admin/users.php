@@ -6,9 +6,15 @@ requireRole('admin');
 $db = getDB();
 
 $stmt = $db->prepare("
-    SELECT u.*, cb.name AS created_by_name
+    SELECT u.*,
+           cb.name AS created_by_name,
+           p.first_name AS person_first, p.last_name AS person_last,
+           p.racing_number,
+           t.name AS team_name
     FROM users u
     LEFT JOIN users cb ON cb.id = u.created_by
+    LEFT JOIN people p ON p.id = u.linked_id AND u.role = 'driver'
+    LEFT JOIN teams t ON t.id = u.linked_id AND u.role IN ('team_manager','engineer')
     ORDER BY FIELD(u.role,'admin','race_director','team_manager','engineer','driver','media','fan'), u.name ASC
 ");
 $stmt->execute();

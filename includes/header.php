@@ -35,6 +35,8 @@ switch ($role) {
             ['href' => APP_URL . '/admin/standings.php',          'label' => 'Standings',    'icon' => '&#127942;'],
             ['href' => APP_URL . '/admin/results_overview.php',   'label' => 'Results',      'icon' => '&#9989;'],
             ['href' => APP_URL . '/admin/penalties.php',          'label' => 'Penalties',    'icon' => '&#9888;'],
+            ['href' => APP_URL . '/admin/telemetry.php',          'label' => 'Telemetry',    'icon' => '&#128200;'],
+            ['href' => APP_URL . '/admin/pitstops.php',           'label' => 'Pit Stops',    'icon' => '&#128295;'],
             ['href' => APP_URL . '/admin/audit_log.php',          'label' => 'Audit Log',    'icon' => '&#128221;'],
         ];
         break;

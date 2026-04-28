@@ -28,6 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = $passError;
             } elseif ($new !== $confirm) {
                 $errors[] = 'New passwords do not match.';
+            } elseif ($forced && password_verify($new, $row['password_hash'] ?? '')) {
+                $errors[] = 'New password must be different from your temporary password.';
             } else {
                 $hash = password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]);
                 $db->prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?')
@@ -80,8 +82,10 @@ $csrfToken = generateCSRFToken();
 
         <div class="form-group">
             <label class="form-label required" for="new_password">New Password</label>
-            <input type="password" id="new_password" name="new_password" class="form-control" required>
-            <div class="form-hint">Min 8 chars, uppercase, lowercase, number, and special character.</div>
+            <input type="password" id="new_password" name="new_password" class="form-control"
+                   data-pw-validate="pw-feedback" required maxlength="25">
+            <div id="pw-feedback" class="pw-feedback"></div>
+            <div class="form-hint"><?= h(passwordHint()) ?></div>
         </div>
 
         <div class="form-group">

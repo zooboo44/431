@@ -71,6 +71,14 @@ $career = $stmt->fetch();
 renderFlash();
 ?>
 
+<?php if (!empty($_GET['prompt_manager'])): ?>
+<div class="alert" style="background:rgba(var(--warning-rgb,230,160,20),0.15);border:1px solid var(--warning);color:var(--text-primary);margin-bottom:1rem">
+    <strong>&#9888; No team manager yet.</strong>
+    Would you like to create a team manager account for this team?
+    <a href="<?= APP_URL ?>/admin/users_create.php?role=team_manager" class="btn btn-primary btn-sm" style="margin-left:1rem">Create Team Manager</a>
+</div>
+<?php endif; ?>
+
 <div class="page-header">
     <div>
         <h1 class="page-title"><?= h($team['name']) ?></h1>

@@ -34,10 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($errors)) {
                 $db->prepare("INSERT INTO teams (name, short_name, nationality, founded_year) VALUES (?,?,?,?)")
                    ->execute([$name, $shortName, $nationality, $founded]);
-                $newId = $db->lastInsertId();
-                logAudit($_SESSION['user_id'], 'create', 'teams', (int)$newId, "Created team: $name");
+                $newId = (int)$db->lastInsertId();
+                logAudit($_SESSION['user_id'], 'create', 'teams', $newId, "Created team: $name");
                 rotateCSRFToken();
-                redirectWithMessage(APP_URL . '/admin/teams.php', 'success', "Team '{$name}' created.");
+                redirectWithMessage(APP_URL . '/admin/team_detail.php?id=' . $newId . '&prompt_manager=1', 'success', "Team '{$name}' created. You can now add a team manager account below.");
             }
         }
     }

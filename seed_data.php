@@ -41,7 +41,7 @@ function createUser(PDO $db, string $name, string $email, string $password, stri
 
 // Admin must be created first so issued_by FK (penalties etc.) resolves on clean DB
 $adminId = 0;
-$_aHash = password_hash('Admin123', PASSWORD_BCRYPT, ['cost' => 12]);
+$_aHash = password_hash('Admin123!', PASSWORD_BCRYPT, ['cost' => 12]);
 $_aExist = $db->prepare("SELECT id FROM users WHERE email='admin@f1app.com'");
 $_aExist->execute();
 if ($_aExist->fetch()) {
@@ -66,6 +66,16 @@ $keyCheck->execute();
 if (!(int)$keyCheck->fetchColumn()) {
     $db->exec("ALTER TABLE pit_stops ADD UNIQUE KEY unique_entry_stop (race_entry_id, stop_number)");
 }
+// engineer_requests: separate table for pending engineer access requests from team managers
+$db->exec("CREATE TABLE IF NOT EXISTS engineer_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    requested_by_team_id INT NOT NULL,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY fk_er_team (requested_by_team_id),
+    CONSTRAINT fk_er_team FOREIGN KEY (requested_by_team_id) REFERENCES teams(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 echo "Schema patches applied\n";
 
 // ─── STEP 0: FOUNDATION — TEAMS + CIRCUITS ───────────────────────────────────
@@ -208,11 +218,20 @@ echo "2025 drivers ensured\n";
 // ts1=RBR:1,2  ts2=MER:3,4  ts3=FER:5,6  ts4=MCL:7,8  ts5=AMR:9,10
 // ts6=ALP:11,12  ts7=WIL:13,14  ts8=RB:15,16  ts9=SAU:17,18  ts10=HAA:19,20
 $lineup2025 = [1=>[1,2],2=>[3,4],3=>[5,6],4=>[7,8],5=>[9,10],6=>[11,12],7=>[13,14],8=>[15,16],9=>[17,18],10=>[19,20]];
+$active2025Pids = [];
 foreach ($lineup2025 as $tsId => $pids) {
     foreach ($pids as $pid) {
-        $db->prepare("INSERT IGNORE INTO driver_seasons (person_id,team_season_id,season_id,status,joined_round) VALUES (?,?,?,'active',1)")
+        // Use UPSERT so re-runs always reset to correct status
+        $db->prepare("INSERT INTO driver_seasons (person_id,team_season_id,season_id,status,joined_round) VALUES (?,?,?,'active',1)
+            ON DUPLICATE KEY UPDATE status='active', team_season_id=VALUES(team_season_id)")
            ->execute([$pid, $tsId, $s25]);
+        $active2025Pids[] = $pid;
     }
+}
+// Force reserves in 2025 to 'inactive' (may have been corrupted by prior runs)
+if (!empty($active2025Pids)) {
+    $inList = implode(',', $active2025Pids);
+    $db->exec("UPDATE driver_seasons SET status='inactive' WHERE season_id=$s25 AND person_id NOT IN ($inList)");
 }
 echo "2025 driver seasons ensured\n";
 
@@ -456,13 +475,18 @@ foreach ([2023=>$s23, 2024=>$s24] as $yr=>$sid) {
     }
 }
 
-// Ensure ALL 2025 races have entries (including scheduled future rounds)
+// Ensure ALL 2025 races have entries for ACTIVE drivers only
 $allRace2025Ids = $db->query("SELECT id FROM races WHERE season_id=$s25")->fetchAll(PDO::FETCH_COLUMN);
 foreach ($allRace2025Ids as $rid25) {
     foreach ($driverTeam[2025] as $pid=>$tsId) {
         $db->prepare("INSERT IGNORE INTO race_entries (race_id, person_id, team_season_id) VALUES (?,?,?)")
            ->execute([$rid25, $pid, $tsId]);
     }
+}
+// Remove race entries for inactive/reserve drivers in 2025 (stale from prior runs)
+$activePidList = empty($driverTeam[2025]) ? '0' : implode(',', array_keys($driverTeam[2025]));
+foreach ($allRace2025Ids as $rid25) {
+    $db->exec("DELETE FROM race_entries WHERE race_id=$rid25 AND person_id NOT IN ($activePidList)");
 }
 
 echo "Race entries populated\n";
@@ -871,17 +895,17 @@ $engineers = [
 ];
 
 // Race director
-createUser($db, 'Race Director', 'rd@f1app.com', 'Director123', 'race_director', 0);
+createUser($db, 'Race Director', 'rd@f1app.com', 'Director123!', 'race_director', 0);
 
 // Team Managers
 foreach ($teamManagers as $tid => [$fn, $ln, $email, $linkedTeam]) {
-    $pwd = $fn . '123';
+    $pwd = strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!';
     createUser($db, "$fn $ln", $email, $pwd, 'team_manager', $linkedTeam);
 }
 
 // Engineers
 foreach ($engineers as $tid => [$fn, $ln, $email, $linkedTeam]) {
-    $pwd = $fn . '123';
+    $pwd = strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!';
     createUser($db, "$fn $ln", $email, $pwd, 'engineer', $linkedTeam);
 }
 
@@ -911,17 +935,17 @@ $driverData2025 = [
 foreach ($driverData2025 as $num => [$fn, $ln, $email]) {
     $pid = $peopleByNum[$num] ?? null;
     if (!$pid) continue;
-    $pwd = $fn . '123';
+    $pwd = strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!';
     createUser($db, "$fn $ln", $email, $pwd, 'driver', $pid);
 }
 
 // Media accounts
-createUser($db, 'Sky Sports F1',   'skysports@media.f1', 'Sky123',   'media', 0);
-createUser($db, 'BBC Sport',       'bbc@media.f1',       'BBC123',   'media', 0);
+createUser($db, 'Sky Sports F1',   'skysports@media.f1', 'Sky1234!',   'media', 0);
+createUser($db, 'BBC Sport',       'bbc@media.f1',       'Bbc1234!',   'media', 0);
 
 // Fan accounts
-createUser($db, 'Fan User One',    'fan1@f1fans.com', 'Fan123',  'fan', 0);
-createUser($db, 'Fan User Two',    'fan2@f1fans.com', 'Fan123',  'fan', 0);
+createUser($db, 'Fan User One',    'fan1@f1fans.com', 'Fan1234!',  'fan', 0);
+createUser($db, 'Fan User Two',    'fan2@f1fans.com', 'Fan1234!',  'fan', 0);
 
 echo "User accounts created\n";
 
@@ -929,8 +953,8 @@ echo "User accounts created\n";
 
 $creds = [];
 // Admin (default, created at install)
-$creds[] = ['admin',        'Admin',         'admin@f1app.com',   'Admin123',      'N/A'];
-$creds[] = ['race_director','Race Director',  'rd@f1app.com',      'Director123',   'N/A'];
+$creds[] = ['admin',        'Admin',         'admin@f1app.com',   'Admin123!',      'N/A'];
+$creds[] = ['race_director','Race Director',  'rd@f1app.com',      'Director123!',   'N/A'];
 
 $teamNames = [];
 foreach ($db->query("SELECT id, name FROM teams WHERE id <= 10") as $r) {
@@ -938,26 +962,28 @@ foreach ($db->query("SELECT id, name FROM teams WHERE id <= 10") as $r) {
 }
 
 foreach ($teamManagers as $tid => [$fn, $ln, $email, $lt]) {
-    $creds[] = ['team_manager', "$fn $ln", $email, $fn . '123', $teamNames[$tid] ?? ''];
+    $creds[] = ['team_manager', "$fn $ln", $email, (strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!'), $teamNames[$tid] ?? ''];
 }
 foreach ($engineers as $tid => [$fn, $ln, $email, $lt]) {
-    $creds[] = ['engineer', "$fn $ln", $email, $fn . '123', $teamNames[$tid] ?? ''];
+    $creds[] = ['engineer', "$fn $ln", $email, (strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!'), $teamNames[$tid] ?? ''];
 }
 foreach ($driverData2025 as $num => [$fn, $ln, $email]) {
-    // Find team
     $pid = $peopleByNum[$num] ?? null;
     $tsId = $driverTeam[2025][$pid] ?? 0;
     $teamId = 0;
     foreach ($tsIds[$s25] as $tid => $ts) { if ($ts === $tsId) { $teamId = $tid; break; } }
-    $creds[] = ['driver', "$fn $ln", $email, $fn . '123', $teamNames[$teamId] ?? ''];
+    $creds[] = ['driver', "$fn $ln", $email, (strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!'), $teamNames[$teamId] ?? ''];
 }
-$creds[] = ['media', 'Sky Sports F1',   'skysports@media.f1', 'Sky123',  'N/A'];
-$creds[] = ['media', 'BBC Sport',       'bbc@media.f1',       'BBC123',  'N/A'];
-$creds[] = ['fan',   'Fan User One',    'fan1@f1fans.com',    'Fan123',  'N/A'];
-$creds[] = ['fan',   'Fan User Two',    'fan2@f1fans.com',    'Fan123',  'N/A'];
+$creds[] = ['media', 'Sky Sports F1',   'skysports@media.f1', 'Sky1234!', 'N/A'];
+$creds[] = ['media', 'BBC Sport',       'bbc@media.f1',       'Bbc1234!', 'N/A'];
+$creds[] = ['fan',   'Fan User One',    'fan1@f1fans.com',    'Fan1234!', 'N/A'];
+$creds[] = ['fan',   'Fan User Two',    'fan2@f1fans.com',    'Fan1234!', 'N/A'];
 
 $lines  = "F1 Racing Management System — User Credentials Reference\n";
 $lines .= "Generated: " . date('Y-m-d H:i:s') . "\n";
+$lines .= str_repeat('=', 100) . "\n";
+$lines .= "NOTE: Seed account passwords are temporary. Users will be prompted to change them on first login.\n";
+$lines .= "New password must meet constraints: 8-25 characters, uppercase, lowercase, number, special character (!@#\$%^&*).\n";
 $lines .= str_repeat('=', 100) . "\n";
 $lines .= sprintf("%-15s %-25s %-40s %-16s %s\n", 'ROLE', 'NAME', 'EMAIL', 'PASSWORD', 'TEAM');
 $lines .= str_repeat('-', 100) . "\n";
