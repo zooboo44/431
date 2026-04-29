@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Circuits';
 require_once __DIR__ . '/../includes/header.php';
-requireRole('team_manager', 'engineer', 'driver', 'media', 'fan', 'race_director', 'admin');
+requireRole('admin', 'team_manager', 'driver');
 
 $db = getDB();
 $stmt = $db->prepare("

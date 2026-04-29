@@ -1,6 +1,7 @@
 <?php
 $pageTitle = 'Race Detail';
-require_once __DIR__ . '/../includes/header_public.php';
+$publicPage = true;
+require_once __DIR__ . '/../includes/header.php';
 
 $db = getDB();
 $raceId = intval($_GET['id'] ?? 0);

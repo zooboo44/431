@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Race Detail';
 require_once __DIR__ . '/../includes/header.php';
-requireRole('team_manager', 'engineer', 'driver', 'media', 'fan', 'race_director', 'admin');
+requireRole('admin', 'team_manager', 'driver');
 
 $db     = getDB();
 $raceId = intval($_GET['id'] ?? 0);

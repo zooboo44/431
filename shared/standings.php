@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Championship Standings';
 require_once __DIR__ . '/../includes/header.php';
-requireRole('team_manager', 'engineer', 'driver', 'media', 'fan', 'race_director', 'admin');
+requireRole('admin', 'team_manager', 'driver');
 
 $db = getDB();
 $seasons = getSeasonList();
@@ -94,11 +94,9 @@ renderFlash();
                 </tbody>
             </table>
         </div>
-        <?php if (($_SESSION['role'] ?? '') !== 'fan'): ?>
         <div style="margin-top:0.75rem">
             <button class="btn btn-outline btn-sm" data-export-csv="driver-standings-table" data-filename="driver_standings_<?= h((string)$selectedYear) ?>.csv">Export CSV</button>
         </div>
-        <?php endif; ?>
         <?php endif; ?>
     </div>
 
@@ -127,11 +125,9 @@ renderFlash();
                 </tbody>
             </table>
         </div>
-        <?php if (($_SESSION['role'] ?? '') !== 'fan'): ?>
         <div style="margin-top:0.75rem">
             <button class="btn btn-outline btn-sm" data-export-csv="constructor-standings-table" data-filename="constructor_standings_<?= h((string)$selectedYear) ?>.csv">Export CSV</button>
         </div>
-        <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>

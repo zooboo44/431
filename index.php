@@ -1,6 +1,7 @@
 <?php
 $pageTitle = 'F1 Management System — Home';
-require_once __DIR__ . '/includes/header_public.php';
+$publicPage = true;
+require_once __DIR__ . '/includes/header.php';
 
 $db = getDB();
 $activeSeason = getActiveSeason();

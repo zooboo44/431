@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Standings';
 require_once __DIR__ . '/../includes/header.php';
-requireRole('admin', 'race_director');
+requireRole('admin');
 
 $db      = getDB();
 $seasons = getSeasonList();
@@ -17,7 +17,7 @@ foreach ($seasons as $s) { if ($s['id'] == $selectedSeasonId) { $selectedYear = 
 
 // Handle server-side CSV export
 if (isset($_GET['export'])) {
-    requireRole('admin', 'race_director');
+    requireRole('admin');
     $type = $_GET['export'];
     header('Content-Type: text/csv; charset=UTF-8');
     header('Content-Disposition: attachment; filename="' . ($type === 'drivers' ? 'driver' : 'constructor') . '_standings_' . $selectedYear . '.csv"');

@@ -4,16 +4,12 @@ define('APP_URL', 'http://localhost/f1app');
 define('APP_NAME', 'F1 Management System');
 define('SESSION_TIMEOUT', 7200); // 2 hours in seconds
 
-define('RESTRICTED_ROLES', ['admin', 'race_director', 'team_manager', 'engineer', 'driver']);
+define('RESTRICTED_ROLES', ['admin', 'team_manager', 'driver']);
 
 define('ROLE_DASHBOARDS', [
-    'admin'          => APP_URL . '/admin/dashboard.php',
-    'race_director'  => APP_URL . '/race_director/dashboard.php',
-    'team_manager'   => APP_URL . '/team_manager/dashboard.php',
-    'engineer'       => APP_URL . '/engineer/dashboard.php',
-    'driver'         => APP_URL . '/driver/dashboard.php',
-    'media'          => APP_URL . '/media/dashboard.php',
-    'fan'            => APP_URL . '/fan/dashboard.php',
+    'admin'        => APP_URL . '/admin/dashboard.php',
+    'team_manager' => APP_URL . '/team_manager/dashboard.php',
+    'driver'       => APP_URL . '/driver/dashboard.php',
 ]);
 
 // Race points: position → points
@@ -31,13 +27,9 @@ define('SPRINT_POINTS', [
 define('FASTEST_LAP_BONUS', 1);
 
 define('ROLE_BADGE_COLORS', [
-    'admin'          => '#e10600',
-    'race_director'  => '#ff8000',
-    'team_manager'   => '#0066cc',
-    'engineer'       => '#00d2be',
-    'driver'         => '#00a550',
-    'media'          => '#7b2d8b',
-    'fan'            => '#555555',
+    'admin'        => '#e10600',
+    'team_manager' => '#0066cc',
+    'driver'       => '#00a550',
 ]);
 
 // Rate limiting

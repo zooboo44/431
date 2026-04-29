@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Race Results';
 require_once __DIR__ . '/../includes/header.php';
-requireRole('team_manager', 'engineer', 'driver', 'media', 'fan', 'race_director', 'admin');
+requireRole('admin', 'team_manager', 'driver');
 
 $db = getDB();
 $seasons = getSeasonList();
@@ -61,9 +61,7 @@ renderFlash();
         <div class="table-search">
             <input type="text" class="table-search-input" data-table="results-table" placeholder="Search races...">
         </div>
-        <?php if (($_SESSION['role'] ?? '') !== 'fan'): ?>
         <button class="btn btn-outline btn-sm" data-export-csv="results-table" data-filename="results_<?= h((string)$selectedYear) ?>.csv">Export CSV</button>
-        <?php endif; ?>
     </div>
     <table class="sortable" id="results-table">
         <thead><tr>
