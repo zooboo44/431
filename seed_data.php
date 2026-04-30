@@ -66,16 +66,6 @@ $keyCheck->execute();
 if (!(int)$keyCheck->fetchColumn()) {
     $db->exec("ALTER TABLE pit_stops ADD UNIQUE KEY unique_entry_stop (race_entry_id, stop_number)");
 }
-// engineer_requests: separate table for pending engineer access requests from team managers
-$db->exec("CREATE TABLE IF NOT EXISTS engineer_requests (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
-    requested_by_team_id INT NOT NULL,
-    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-    KEY fk_er_team (requested_by_team_id),
-    CONSTRAINT fk_er_team FOREIGN KEY (requested_by_team_id) REFERENCES teams(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 echo "Schema patches applied\n";
 
 // ─── STEP 0: FOUNDATION — TEAMS + CIRCUITS ───────────────────────────────────
@@ -106,52 +96,6 @@ $db->exec("INSERT IGNORE INTO circuits (id,name,country,city,length_km,number_of
     (10,'Circuit de Barcelona-Catalunya','Spain','Barcelona',4.675,66,'permanent',79981,NULL,1)");
 echo "Circuits ensured\n";
 
-// roles_permissions (static reference data — role, resource, action)
-$rp = [];
-$adminResources = ['users','teams','people','seasons','races','circuits','race_entries',
-    'race_results','qualifying_results','sprint_results','pit_stops','lap_telemetry',
-    'penalties','driver_standings','constructor_standings'];
-foreach ($adminResources as $res) {
-    foreach (['create','read','update','delete'] as $act) {
-        $rp[] = "('admin','$res','$act')";
-    }
-}
-$rdResources = ['races','race_entries','race_results','qualifying_results',
-    'sprint_results','penalties','driver_standings','constructor_standings'];
-foreach ($rdResources as $res) {
-    foreach (['create','read','update','delete'] as $act) {
-        $rp[] = "('race_director','$res','$act')";
-    }
-}
-foreach (['teams','people','seasons','circuits','pit_stops','lap_telemetry'] as $res) {
-    $rp[] = "('race_director','$res','read')";
-}
-foreach (['race_results','qualifying_results','sprint_results','pit_stops',
-    'lap_telemetry','driver_standings','constructor_standings','penalties'] as $res) {
-    $rp[] = "('team_manager','$res','read')";
-}
-foreach (['teams','people','seasons','circuits','race_entries'] as $res) {
-    $rp[] = "('team_manager','$res','read')";
-}
-foreach (['people','race_entries'] as $res) {
-    foreach (['create','update'] as $act) { $rp[] = "('team_manager','$res','$act')"; }
-}
-foreach (['race_results','qualifying_results','sprint_results','pit_stops',
-    'lap_telemetry','driver_standings','constructor_standings'] as $res) {
-    $rp[] = "('engineer','$res','read')";
-}
-foreach (['pit_stops','lap_telemetry'] as $res) {
-    foreach (['create','update','delete'] as $act) { $rp[] = "('engineer','$res','$act')"; }
-}
-foreach (['race_results','qualifying_results','sprint_results','pit_stops',
-    'lap_telemetry','driver_standings','constructor_standings','penalties',
-    'teams','people','seasons','circuits','race_entries','races'] as $res) {
-    $rp[] = "('driver','$res','read')";
-    $rp[] = "('media','$res','read')";
-    $rp[] = "('fan','$res','read')";
-}
-$db->exec("INSERT IGNORE INTO roles_permissions (role,resource,action) VALUES " . implode(',', $rp));
-echo "Roles permissions ensured\n";
 
 // ─── STEP 1: CLEAN UP ────────────────────────────────────────────────────────
 
@@ -700,10 +644,10 @@ foreach ($sprintFinish as $key=>$order) {
         $entryId = $entryIds[$rid][$pid] ?? null;
         if (!$entryId) continue;
         $pts = $SPRPTS[$pos] ?? 0;
-        $db->prepare("INSERT INTO sprint_results (race_entry_id, finish_position, points_scored, status)
-            VALUES (?,?,?,'Finished')
-            ON DUPLICATE KEY UPDATE finish_position=VALUES(finish_position), points_scored=VALUES(points_scored)")
-           ->execute([$entryId, $pos, $pts]);
+        $db->prepare("INSERT INTO race_results (race_entry_id, finish_position, points_scored, status, is_sprint, start_position, laps_completed)
+            VALUES (?,?,?,'Finished',1,?,0)
+            ON DUPLICATE KEY UPDATE finish_position=VALUES(finish_position), points_scored=VALUES(points_scored), status=VALUES(status)")
+           ->execute([$entryId, $pos, $pts, $pos]);
         $pos++;
     }
 }
@@ -809,8 +753,7 @@ echo "Lap telemetry inserted\n";
 
 // ─── STEP 14: PENALTIES ──────────────────────────────────────────────────────
 
-// Get the race_director user id (fallback to admin)
-$rdUser = (int)($db->query("SELECT id FROM users WHERE role='race_director' LIMIT 1")->fetchColumn() ?: $adminId);
+$rdUser = $adminId;
 
 $penaltyData = [
     ['2023-1', 18,  'time_penalty',  'Unsafe release from pit lane',              5, 0, 2, 0],
@@ -847,15 +790,30 @@ foreach ([$s23, $s24, $s25] as $sid) {
 }
 echo "Standings recalculated for all 3 seasons\n";
 
-// Set champion_person_id and champion_team_id for 2023 and 2024
+// Set champion_person_id and champion_team_id for 2023 and 2024 (live from race_results)
 foreach ([$s23, $s24] as $sid) {
-    $topDriver = $db->prepare("SELECT person_id FROM driver_standings WHERE season_id=? ORDER BY points DESC LIMIT 1");
+    $topDriver = $db->prepare("
+        SELECT re.person_id, SUM(rr.points_scored) AS pts
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        WHERE r.season_id = ? AND rr.is_sprint = 0
+        GROUP BY re.person_id ORDER BY pts DESC LIMIT 1");
     $topDriver->execute([$sid]);
-    $champPersonId = (int)($topDriver->fetchColumn() ?: 0);
+    $champRow = $topDriver->fetch();
+    $champPersonId = $champRow ? (int)$champRow['person_id'] : 0;
 
-    $topTeam = $db->prepare("SELECT team_id FROM constructor_standings WHERE season_id=? ORDER BY points DESC LIMIT 1");
+    $topTeam = $db->prepare("
+        SELECT ts.team_id, SUM(rr.points_scored) AS pts
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN team_seasons ts ON ts.id = re.team_season_id
+        WHERE r.season_id = ?
+        GROUP BY ts.team_id ORDER BY pts DESC LIMIT 1");
     $topTeam->execute([$sid]);
-    $champTeamId = (int)($topTeam->fetchColumn() ?: 0);
+    $champTeamRow = $topTeam->fetch();
+    $champTeamId = $champTeamRow ? (int)$champTeamRow['team_id'] : 0;
 
     if ($champPersonId || $champTeamId) {
         $db->prepare("UPDATE seasons SET champion_person_id=?, champion_team_id=? WHERE id=?")
@@ -880,33 +838,10 @@ $teamManagers = [
    10  => ['Ayao', 'Komatsu',    'ayao.komatsu@haas.f1',        10],
 ];
 
-// Engineers (one per team)
-$engineers = [
-    1  => ['Peter', 'Eng',       'peter.eng@redbull.f1',        1],
-    2  => ['Mike', 'Elliott',    'mike.elliott@mercedes.f1',    2],
-    3  => ['Luigi', 'Ferrari',   'luigi.ferrari@ferrari.f1',    3],
-    4  => ['Tom', 'Anderson',    'tom.anderson@mclaren.f1',     4],
-    5  => ['Eric', 'Blandin',    'eric.blandin@astonmartin.f1', 5],
-    6  => ['Pierre', 'Hamelin',  'pierre.hamelin@alpine.f1',    6],
-    7  => ['Dave', 'Redding',    'dave.redding@williams.f1',    7],
-    8  => ['Ciaron', 'Pilbeam',   'ciaron.pilbeam@rb.f1',        8],
-    9  => ['Jan', 'Monchaux',    'jan.monchaux@sauber.f1',      9],
-   10  => ['Gary', 'Gannon',     'gary.gannon@haas.f1',        10],
-];
-
-// Race director
-createUser($db, 'Race Director', 'rd@f1app.com', 'Director123!', 'race_director', 0);
-
 // Team Managers
 foreach ($teamManagers as $tid => [$fn, $ln, $email, $linkedTeam]) {
     $pwd = strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!';
     createUser($db, "$fn $ln", $email, $pwd, 'team_manager', $linkedTeam);
-}
-
-// Engineers
-foreach ($engineers as $tid => [$fn, $ln, $email, $linkedTeam]) {
-    $pwd = strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!';
-    createUser($db, "$fn $ln", $email, $pwd, 'engineer', $linkedTeam);
 }
 
 // Driver accounts — one per active 2025 driver
@@ -939,22 +874,13 @@ foreach ($driverData2025 as $num => [$fn, $ln, $email]) {
     createUser($db, "$fn $ln", $email, $pwd, 'driver', $pid);
 }
 
-// Media accounts
-createUser($db, 'Sky Sports F1',   'skysports@media.f1', 'Sky1234!',   'media', 0);
-createUser($db, 'BBC Sport',       'bbc@media.f1',       'Bbc1234!',   'media', 0);
-
-// Fan accounts
-createUser($db, 'Fan User One',    'fan1@f1fans.com', 'Fan1234!',  'fan', 0);
-createUser($db, 'Fan User Two',    'fan2@f1fans.com', 'Fan1234!',  'fan', 0);
-
 echo "User accounts created\n";
 
 // ─── STEP 17: CREDENTIALS FILE ───────────────────────────────────────────────
 
 $creds = [];
 // Admin (default, created at install)
-$creds[] = ['admin',        'Admin',         'admin@f1app.com',   'Admin123!',      'N/A'];
-$creds[] = ['race_director','Race Director',  'rd@f1app.com',      'Director123!',   'N/A'];
+$creds[] = ['admin', 'Admin', 'admin@f1app.com', 'Admin123!', 'N/A'];
 
 $teamNames = [];
 foreach ($db->query("SELECT id, name FROM teams WHERE id <= 10") as $r) {
@@ -964,9 +890,6 @@ foreach ($db->query("SELECT id, name FROM teams WHERE id <= 10") as $r) {
 foreach ($teamManagers as $tid => [$fn, $ln, $email, $lt]) {
     $creds[] = ['team_manager', "$fn $ln", $email, (strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!'), $teamNames[$tid] ?? ''];
 }
-foreach ($engineers as $tid => [$fn, $ln, $email, $lt]) {
-    $creds[] = ['engineer', "$fn $ln", $email, (strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!'), $teamNames[$tid] ?? ''];
-}
 foreach ($driverData2025 as $num => [$fn, $ln, $email]) {
     $pid = $peopleByNum[$num] ?? null;
     $tsId = $driverTeam[2025][$pid] ?? 0;
@@ -974,10 +897,6 @@ foreach ($driverData2025 as $num => [$fn, $ln, $email]) {
     foreach ($tsIds[$s25] as $tid => $ts) { if ($ts === $tsId) { $teamId = $tid; break; } }
     $creds[] = ['driver', "$fn $ln", $email, (strlen($fn) < 4 ? $fn . '1234!' : $fn . '123!'), $teamNames[$teamId] ?? ''];
 }
-$creds[] = ['media', 'Sky Sports F1',   'skysports@media.f1', 'Sky1234!', 'N/A'];
-$creds[] = ['media', 'BBC Sport',       'bbc@media.f1',       'Bbc1234!', 'N/A'];
-$creds[] = ['fan',   'Fan User One',    'fan1@f1fans.com',    'Fan1234!', 'N/A'];
-$creds[] = ['fan',   'Fan User Two',    'fan2@f1fans.com',    'Fan1234!', 'N/A'];
 
 $lines  = "F1 Racing Management System — User Credentials Reference\n";
 $lines .= "Generated: " . date('Y-m-d H:i:s') . "\n";
@@ -988,7 +907,7 @@ $lines .= str_repeat('=', 100) . "\n";
 $lines .= sprintf("%-15s %-25s %-40s %-16s %s\n", 'ROLE', 'NAME', 'EMAIL', 'PASSWORD', 'TEAM');
 $lines .= str_repeat('-', 100) . "\n";
 
-$roleOrder = ['admin','race_director','team_manager','engineer','driver','media','fan'];
+$roleOrder = ['admin','team_manager','driver'];
 usort($creds, function($a, $b) use ($roleOrder) {
     $ri = array_search($a[0], $roleOrder);
     $rj = array_search($b[0], $roleOrder);
@@ -1016,13 +935,11 @@ $counts = [
     'races_total'          => "SELECT COUNT(*) FROM races",
     'race_entries'         => "SELECT COUNT(*) FROM race_entries",
     'qualifying_results'   => "SELECT COUNT(*) FROM qualifying_results",
-    'race_results'         => "SELECT COUNT(*) FROM race_results",
-    'sprint_results'       => "SELECT COUNT(*) FROM sprint_results",
+    'race_results'         => "SELECT COUNT(*) FROM race_results WHERE is_sprint=0",
+    'sprint_results_rows'  => "SELECT COUNT(*) FROM race_results WHERE is_sprint=1",
     'pit_stops'            => "SELECT COUNT(*) FROM pit_stops",
     'lap_telemetry'        => "SELECT COUNT(*) FROM lap_telemetry",
     'penalties'            => "SELECT COUNT(*) FROM penalties",
-    'driver_standings'     => "SELECT COUNT(*) FROM driver_standings",
-    'constructor_standings'=> "SELECT COUNT(*) FROM constructor_standings",
     'users'                => "SELECT COUNT(*) FROM users",
 ];
 

@@ -5,6 +5,161 @@ requireRole('team_manager');
 
 $db     = getDB();
 $teamId = intval($_SESSION['linked_id'] ?? 0);
+
+// ── Driver profile detail view ────────────────────────────────────────────────
+if (isset($_GET['person_id'])) {
+    $personId = intval($_GET['person_id']);
+
+    $stmt = $db->prepare("
+        SELECT p.* FROM people p
+        JOIN driver_seasons drs ON drs.person_id = p.id
+        JOIN team_seasons ts ON ts.id = drs.team_season_id AND ts.team_id = ?
+        WHERE p.id = ? LIMIT 1
+    ");
+    $stmt->execute([$teamId, $personId]);
+    $person = $stmt->fetch();
+    if (!$person) { include __DIR__ . '/../includes/403.php'; exit; }
+
+    $stmt = $db->prepare("
+        SELECT s.year, t.id AS team_id, t.name AS team_name, drs.status,
+               COALESCE((
+                   SELECT SUM(rr2.points_scored)
+                   FROM race_results rr2
+                   JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+                   JOIN races r2 ON r2.id = re2.race_id
+                   WHERE r2.season_id = s.id AND r2.status='completed' AND re2.person_id = drs.person_id
+               ),0) AS points,
+               COALESCE((
+                   SELECT SUM(CASE WHEN rr2.finish_position=1 AND rr2.is_sprint=0 THEN 1 ELSE 0 END)
+                   FROM race_results rr2
+                   JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+                   JOIN races r2 ON r2.id = re2.race_id
+                   WHERE r2.season_id = s.id AND r2.status='completed' AND re2.person_id = drs.person_id
+               ),0) AS wins,
+               COALESCE((
+                   SELECT SUM(CASE WHEN rr2.finish_position<=3 AND rr2.finish_position IS NOT NULL AND rr2.is_sprint=0 THEN 1 ELSE 0 END)
+                   FROM race_results rr2
+                   JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+                   JOIN races r2 ON r2.id = re2.race_id
+                   WHERE r2.season_id = s.id AND r2.status='completed' AND re2.person_id = drs.person_id
+               ),0) AS podiums,
+               COALESCE((
+                   SELECT SUM(CASE WHEN rr2.status='DNF' AND rr2.is_sprint=0 THEN 1 ELSE 0 END)
+                   FROM race_results rr2
+                   JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+                   JOIN races r2 ON r2.id = re2.race_id
+                   WHERE r2.season_id = s.id AND r2.status='completed' AND re2.person_id = drs.person_id
+               ),0) AS dnfs,
+               NULL AS position
+        FROM driver_seasons drs
+        JOIN seasons s ON s.id = drs.season_id
+        JOIN team_seasons ts ON ts.id = drs.team_season_id
+        JOIN teams t ON t.id = ts.team_id
+        WHERE drs.person_id = ?
+        ORDER BY s.year DESC
+    ");
+    $stmt->execute([$personId]);
+    $careerBySeasons = $stmt->fetchAll();
+
+    $stmt = $db->prepare("
+        SELECT r.id AS race_id, r.name AS race_name, r.round_number, s.year,
+               rr.finish_position, rr.points_scored, rr.status, rr.fastest_lap_bonus,
+               qr.grid_position
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id AND re.person_id = ?
+        JOIN race_entries re2 ON re2.id = rr.race_entry_id
+        JOIN team_seasons ts ON ts.id = re2.team_season_id AND ts.team_id = ?
+        JOIN races r ON r.id = re2.race_id
+        JOIN seasons s ON s.id = r.season_id
+        LEFT JOIN qualifying_results qr ON qr.race_entry_id = re.id
+        WHERE rr.is_sprint = 0
+        ORDER BY r.race_date DESC
+        LIMIT 20
+    ");
+    $stmt->execute([$personId, $teamId]);
+    $recentResults = $stmt->fetchAll();
+
+    $pageTitle = h($person['first_name'] . ' ' . $person['last_name']) . ' — Profile';
+    $totalPts  = array_sum(array_column($careerBySeasons, 'points'));
+    $totalWins = array_sum(array_column($careerBySeasons, 'wins'));
+    $totalPods = array_sum(array_column($careerBySeasons, 'podiums'));
+    $totalDnfs = array_sum(array_column($careerBySeasons, 'dnfs'));
+    ?>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">#<?= h((string)$person['racing_number']) ?> <?= h($person['first_name'] . ' ' . $person['last_name']) ?></h1>
+        <p class="page-subtitle"><?= h($person['nationality']) ?> &bull; Born <?= h(date('d M Y', strtotime($person['date_of_birth']))) ?></p>
+    </div>
+    <a href="<?= APP_URL ?>/team_manager/drivers.php" class="btn btn-outline">&larr; Drivers</a>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat-card"><div class="stat-value"><?= h(number_format($totalPts,1)) ?></div><div class="stat-label">Career Points</div></div>
+    <div class="stat-card"><div class="stat-value"><?= h((string)$totalWins) ?></div><div class="stat-label">Wins</div></div>
+    <div class="stat-card"><div class="stat-value"><?= h((string)$totalPods) ?></div><div class="stat-label">Podiums</div></div>
+    <div class="stat-card"><div class="stat-value"><?= h((string)$totalDnfs) ?></div><div class="stat-label">DNFs</div></div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-title">Season-by-Season</div>
+        <?php if (empty($careerBySeasons)): ?>
+        <div class="empty-state"><p>No season data.</p></div>
+        <?php else: ?>
+        <table>
+            <thead><tr><th>Year</th><th>Team</th><th>Pos</th><th>Pts</th><th>Wins</th><th>Pods</th></tr></thead>
+            <tbody>
+            <?php foreach ($careerBySeasons as $cs): ?>
+            <tr>
+                <td><strong><?= h((string)$cs['year']) ?></strong></td>
+                <td><a href="<?= APP_URL ?>/shared/standings.php?view=team&id=<?= (int)$cs['team_id'] ?>" class="text-muted"><?= h($cs['team_name']) ?></a></td>
+                <td><?= $cs['position'] ? 'P' . h((string)$cs['position']) : '—' ?></td>
+                <td class="text-accent fw-bold"><?= h((string)($cs['points'] ?? 0)) ?></td>
+                <td><?= h((string)($cs['wins'] ?? 0)) ?></td>
+                <td><?= h((string)($cs['podiums'] ?? 0)) ?></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
+    <div class="card">
+        <div class="card-title">Recent Results (Our Races)</div>
+        <?php if (empty($recentResults)): ?>
+        <div class="empty-state"><p>No results yet.</p></div>
+        <?php else: ?>
+        <table>
+            <thead><tr><th>Year</th><th>Race</th><th>Grid</th><th>Finish</th><th>Pts</th></tr></thead>
+            <tbody>
+            <?php foreach ($recentResults as $r): ?>
+            <tr class="clickable-row" data-href="<?= APP_URL ?>/shared/results.php?id=<?= (int)$r['race_id'] ?>">
+                <td class="text-muted"><?= h((string)$r['year']) ?></td>
+                <td><a href="<?= APP_URL ?>/shared/results.php?id=<?= (int)$r['race_id'] ?>"><?= h($r['race_name']) ?> Rd <?= h((string)$r['round_number']) ?></a></td>
+                <td class="text-muted"><?= $r['grid_position'] ? 'P' . h((string)$r['grid_position']) : '—' ?></td>
+                <td>
+                    <?php if ($r['finish_position']): ?>
+                    <span class="position-badge pos-<?= $r['finish_position'] <= 3 ? $r['finish_position'] : 'other' ?>"><?= h((string)$r['finish_position']) ?></span>
+                    <?php else: ?>
+                    <span class="status-badge status-dnf"><?= h($r['status']) ?></span>
+                    <?php endif; ?>
+                    <?= $r['fastest_lap_bonus'] ? ' <span class="fl-indicator">&#9889;</span>' : '' ?>
+                </td>
+                <td class="text-accent"><?= h((string)$r['points_scored']) ?></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
+</div>
+
+<?php
+    require_once __DIR__ . '/../includes/footer.php';
+    exit;
+}
+
+// ── Drivers list view ─────────────────────────────────────────────────────────
 $errors = [];
 
 $activeSeason = getActiveSeason();
@@ -24,25 +179,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $activeSeasonId && $currentTeamSeas
     if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
         $errors[] = 'Invalid token.';
     } else {
-        // Request a new engineer (pending approval)
-        if (isset($_POST['request_engineer'])) {
-            $engFirst = strip_tags(trim($_POST['eng_first_name'] ?? ''));
-            $engLast  = strip_tags(trim($_POST['eng_last_name'] ?? ''));
-            if (!$engFirst) $errors[] = 'Engineer first name is required.';
-            if (!$engLast)  $errors[] = 'Engineer last name is required.';
-            if (empty($errors)) {
-                try {
-                    $db->prepare("INSERT INTO engineer_requests (first_name, last_name, requested_by_team_id) VALUES (?,?,?)")
-                       ->execute([$engFirst, $engLast, $teamId]);
-                    logAudit($_SESSION['user_id'], 'create', 'engineer_requests', null, "Pending engineer: $engFirst $engLast by team $teamId");
-                    rotateCSRFToken();
-                    redirectWithMessage(APP_URL . '/team_manager/drivers.php', 'success', "Engineer request for '$engFirst $engLast' submitted. Awaiting admin approval.");
-                } catch (\PDOException $e) {
-                    $errors[] = 'Could not submit request. The engineer_requests table may not exist yet — contact admin.';
-                }
-            }
-        }
-
         // Request a new driver (pending approval)
         if (isset($_POST['request_driver'])) {
             $firstName = strip_tags(trim($_POST['first_name'] ?? ''));
@@ -154,14 +290,27 @@ if ($activeSeasonId && $currentTeamSeasonId) {
     $stmt = $db->prepare("
         SELECT ds.id AS driver_season_id, ds.status, ds.joined_round,
                p.id AS person_id, p.first_name, p.last_name, p.racing_number, p.nationality,
-               dstand.points, dstand.wins, dstand.position AS championship_pos
+               COALESCE((
+                   SELECT SUM(rr2.points_scored)
+                   FROM race_results rr2
+                   JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+                   JOIN races r2 ON r2.id = re2.race_id
+                   WHERE r2.season_id = ? AND r2.status='completed' AND re2.person_id = p.id
+               ),0) AS points,
+               COALESCE((
+                   SELECT SUM(CASE WHEN rr2.finish_position=1 AND rr2.is_sprint=0 THEN 1 ELSE 0 END)
+                   FROM race_results rr2
+                   JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+                   JOIN races r2 ON r2.id = re2.race_id
+                   WHERE r2.season_id = ? AND r2.status='completed' AND re2.person_id = p.id
+               ),0) AS wins,
+               NULL AS championship_pos
         FROM driver_seasons ds
         JOIN people p ON p.id = ds.person_id
-        LEFT JOIN driver_standings dstand ON dstand.person_id = p.id AND dstand.season_id = ?
         WHERE ds.team_season_id = ? AND ds.season_id = ?
         ORDER BY FIELD(ds.status,'active','replaced','injured'), p.racing_number
     ");
-    $stmt->execute([$activeSeasonId, $currentTeamSeasonId, $activeSeasonId]);
+    $stmt->execute([$activeSeasonId, $activeSeasonId, $currentTeamSeasonId, $activeSeasonId]);
     $currentRoster = $stmt->fetchAll();
 }
 
@@ -202,13 +351,6 @@ $stmt = $db->prepare("SELECT id, first_name, last_name, racing_number, nationali
 $stmt->execute([$teamId]);
 $pendingRequests = $stmt->fetchAll();
 
-// Pending engineer requests for this team
-$pendingEngineerRequests = [];
-try {
-    $erStmt = $db->prepare("SELECT id, first_name, last_name, created_at FROM engineer_requests WHERE requested_by_team_id = ? ORDER BY created_at DESC");
-    $erStmt->execute([$teamId]);
-    $pendingEngineerRequests = $erStmt->fetchAll();
-} catch (\PDOException $e) { /* table may not exist yet */ }
 
 $activeCount = count(array_filter($currentRoster, fn($d) => $d['status'] === 'active'));
 $csrfToken = generateCSRFToken();
@@ -220,7 +362,6 @@ renderFlash();
         <h1 class="page-title">My Drivers</h1>
         <p class="page-subtitle"><?= $activeSeason ? h((string)$activeSeason['year']) . ' season roster' : 'No active season' ?></p>
     </div>
-    <a href="<?= APP_URL ?>/team_manager/export.php?type=drivers" class="btn btn-outline">Export CSV</a>
 </div>
 
 <?php foreach ($errors as $err): ?><div class="alert alert-danger"><?= h($err) ?></div><?php endforeach; ?>
@@ -239,7 +380,7 @@ renderFlash();
         <?php foreach ($currentRoster as $d): ?>
         <div style="border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center">
             <div>
-                <a href="<?= APP_URL ?>/team_manager/driver_profile.php?person_id=<?= (int)$d['person_id'] ?>" style="font-weight:600">#<?= h((string)$d['racing_number']) ?> <?= h($d['first_name'] . ' ' . $d['last_name']) ?></a>
+                <a href="<?= APP_URL ?>/team_manager/drivers.php?person_id=<?= (int)$d['person_id'] ?>" style="font-weight:600">#<?= h((string)$d['racing_number']) ?> <?= h($d['first_name'] . ' ' . $d['last_name']) ?></a>
                 <span class="status-badge status-<?= $d['status'] === 'active' ? 'active' : 'inactive' ?>" style="margin-left:0.5rem"><?= h($d['status']) ?></span>
                 <?php if ($d['points'] !== null): ?>
                 <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem"><?= h((string)$d['points']) ?> pts<?= $d['championship_pos'] ? ' &bull; P' . h((string)$d['championship_pos']) : '' ?></div>
@@ -336,41 +477,6 @@ renderFlash();
     </form>
 </div>
 
-<!-- Pending Engineer Requests -->
-<?php if (!empty($pendingEngineerRequests)): ?>
-<div class="card" style="margin-top:1.5rem">
-    <div class="card-title">&#9203; Pending Engineer Requests</div>
-    <p class="text-muted" style="font-size:0.85rem;margin-bottom:0.75rem">These requests are awaiting admin approval.</p>
-    <?php foreach ($pendingEngineerRequests as $er): ?>
-    <div style="border:1px solid var(--warning);border-radius:var(--radius);padding:0.75rem;margin-bottom:0.5rem">
-        <strong><?= h($er['first_name'] . ' ' . $er['last_name']) ?></strong>
-        <span class="status-badge status-warning" style="margin-left:0.5rem">Pending</span>
-        <span class="text-muted" style="font-size:0.78rem;margin-left:0.5rem">Submitted <?= h(date('d M Y', strtotime($er['created_at']))) ?></span>
-    </div>
-    <?php endforeach; ?>
-</div>
-<?php endif; ?>
-
-<!-- Request New Engineer -->
-<div class="card" style="margin-top:1.5rem">
-    <div class="card-title">&#43; Request New Engineer</div>
-    <p class="text-muted" style="font-size:0.85rem;margin-bottom:1rem">Submit a request to grant engineer portal access to a team member. Admin will set up their login credentials.</p>
-    <form method="post" style="max-width:480px">
-        <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label required" for="eng_first_name">First Name</label>
-                <input type="text" id="eng_first_name" name="eng_first_name" class="form-control" required maxlength="50">
-            </div>
-            <div class="form-group">
-                <label class="form-label required" for="eng_last_name">Last Name</label>
-                <input type="text" id="eng_last_name" name="eng_last_name" class="form-control" required maxlength="50">
-            </div>
-        </div>
-        <button type="submit" name="request_engineer" class="btn btn-primary">Submit Request</button>
-    </form>
-</div>
-
 <!-- All-time drivers -->
 <div class="card" style="margin-top:1.5rem">
     <div class="card-title">&#128203; All-Time Drivers</div>
@@ -389,9 +495,9 @@ renderFlash();
             <tr><td colspan="6" class="text-center text-muted" style="padding:2rem">No drivers found.</td></tr>
             <?php else: ?>
             <?php foreach ($allDrivers as $d): ?>
-            <tr class="clickable-row" data-href="<?= APP_URL ?>/team_manager/driver_profile.php?person_id=<?= (int)$d['id'] ?>">
+            <tr class="clickable-row" data-href="<?= APP_URL ?>/team_manager/drivers.php?person_id=<?= (int)$d['id'] ?>">
                 <td class="text-accent fw-bold"><?= h((string)$d['racing_number']) ?></td>
-                <td><a href="<?= APP_URL ?>/team_manager/driver_profile.php?person_id=<?= (int)$d['id'] ?>" style="font-weight:600"><?= h($d['first_name'] . ' ' . $d['last_name']) ?></a></td>
+                <td><a href="<?= APP_URL ?>/team_manager/drivers.php?person_id=<?= (int)$d['id'] ?>" style="font-weight:600"><?= h($d['first_name'] . ' ' . $d['last_name']) ?></a></td>
                 <td><?= h($d['nationality']) ?></td>
                 <td><?= h((string)$d['seasons_count']) ?></td>
                 <td class="text-accent fw-bold"><?= h(number_format($d['career_points'], 1)) ?></td>

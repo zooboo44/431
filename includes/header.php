@@ -35,7 +35,6 @@ if (!($publicPage ?? false)) {
                 ['href' => APP_URL . '/admin/seasons.php',          'label' => 'Seasons',     'icon' => '&#128197;'],
                 ['href' => APP_URL . '/admin/races.php',            'label' => 'Races',       'icon' => '&#127937;'],
                 ['href' => APP_URL . '/admin/standings.php',        'label' => 'Standings',   'icon' => '&#127942;'],
-                ['href' => APP_URL . '/admin/results_overview.php', 'label' => 'Results',     'icon' => '&#9989;'],
                 ['href' => APP_URL . '/admin/penalties.php',        'label' => 'Penalties',   'icon' => '&#9888;'],
                 ['href' => APP_URL . '/admin/telemetry.php',        'label' => 'Telemetry',   'icon' => '&#128200;'],
                 ['href' => APP_URL . '/admin/pitstops.php',         'label' => 'Pit Stops',   'icon' => '&#128295;'],
@@ -46,18 +45,15 @@ if (!($publicPage ?? false)) {
             $navItems = [
                 ['href' => APP_URL . '/team_manager/dashboard.php', 'label' => 'Dashboard',  'icon' => '&#9776;'],
                 ['href' => APP_URL . '/team_manager/drivers.php',   'label' => 'Drivers',     'icon' => '&#128100;'],
-                ['href' => APP_URL . '/team_manager/results.php',   'label' => 'Results',     'icon' => '&#127937;'],
                 ['href' => APP_URL . '/team_manager/race_data.php', 'label' => 'Race Data',   'icon' => '&#128200;'],
-                ['href' => APP_URL . '/team_manager/pitstops.php',  'label' => 'Pit Stops',   'icon' => '&#128295;'],
-                ['href' => APP_URL . '/team_manager/telemetry.php', 'label' => 'Telemetry',   'icon' => '&#128200;'],
-                ['href' => APP_URL . '/team_manager/circuits.php',  'label' => 'Circuits',    'icon' => '&#9940;'],
+                ['href' => APP_URL . '/shared/results.php',         'label' => 'Results',     'icon' => '&#127937;'],
+                ['href' => APP_URL . '/shared/circuits.php',        'label' => 'Circuits',    'icon' => '&#9940;'],
                 ['href' => APP_URL . '/shared/standings.php',       'label' => 'Standings',   'icon' => '&#127942;'],
             ];
             break;
         case 'driver':
             $navItems = [
                 ['href' => APP_URL . '/driver/dashboard.php',  'label' => 'Dashboard',  'icon' => '&#9776;'],
-                ['href' => APP_URL . '/driver/penalties.php',  'label' => 'Penalties',  'icon' => '&#9888;'],
                 ['href' => APP_URL . '/shared/standings.php',  'label' => 'Standings',  'icon' => '&#127942;'],
             ];
             break;
@@ -142,9 +138,9 @@ if (!($publicPage ?? false)) {
     </div>
     <div class="nav-links">
         <a href="<?= APP_URL ?>/" class="nav-link<?= (str_ends_with($currentPath, 'index.php') || $currentPath === '/f1app/') ? ' active' : '' ?>">Home</a>
-        <a href="<?= APP_URL ?>/public/standings.php" class="nav-link<?= str_contains($currentPath, 'standings') ? ' active' : '' ?>">Standings</a>
-        <a href="<?= APP_URL ?>/public/results.php" class="nav-link<?= str_contains($currentPath, 'results') ? ' active' : '' ?>">Results</a>
-        <a href="<?= APP_URL ?>/public/circuits.php" class="nav-link<?= str_contains($currentPath, 'circuits') ? ' active' : '' ?>">Circuits</a>
+        <a href="<?= APP_URL ?>/shared/standings.php" class="nav-link<?= str_contains($currentPath, 'standings') ? ' active' : '' ?>">Standings</a>
+        <a href="<?= APP_URL ?>/shared/results.php" class="nav-link<?= str_contains($currentPath, 'results') ? ' active' : '' ?>">Results</a>
+        <a href="<?= APP_URL ?>/shared/circuits.php" class="nav-link<?= str_contains($currentPath, 'circuits') ? ' active' : '' ?>">Circuits</a>
     </div>
     <div class="nav-actions">
         <a href="<?= APP_URL ?>/auth/login.php" class="btn btn-primary">Portal</a>

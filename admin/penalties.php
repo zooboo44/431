@@ -244,7 +244,7 @@ renderFlash();
         <div style="border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;margin-bottom:0.5rem">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
                 <div>
-                    <a href="<?= APP_URL ?>/admin/person_detail.php?id=<?= $pen['person_id'] ?>" class="fw-bold"><?= h($pen['first_name'] . ' ' . $pen['last_name']) ?></a>
+                    <a href="<?= APP_URL ?>/admin/people.php?id=<?= $pen['person_id'] ?>" class="fw-bold"><?= h($pen['first_name'] . ' ' . $pen['last_name']) ?></a>
                     <span class="text-muted" style="font-size:0.8rem"> #<?= h((string)$pen['racing_number']) ?></span>
                     <span class="status-badge status-<?= $pen['is_dsq'] ? 'dsq' : 'warning' ?>" style="margin-left:0.5rem"><?= h(str_replace('_',' ',$pen['penalty_type'])) ?></span>
                 </div>

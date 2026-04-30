@@ -12,7 +12,7 @@ startSecureSession();
 
 // Already logged in
 if (!empty($_SESSION['user_id'])) {
-    $role = $_SESSION['role'] ?? 'fan';
+    $role = $_SESSION['role'] ?? '';
     $dest = ROLE_DASHBOARDS[$role] ?? APP_URL . '/shared/standings.php';
     header('Location: ' . $dest);
     exit;
@@ -63,22 +63,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['must_change_password'] = (bool)$user['must_change_password'];
                 $_SESSION['last_activity']        = time();
 
-                // Single session enforcement for restricted roles
+                // Single session enforcement — store token in users row
                 if (in_array($user['role'], RESTRICTED_ROLES, true)) {
-                    // Insert session row first
                     $db->prepare(
-                        'INSERT INTO sessions (id, user_id, ip_address, user_agent, last_activity)
-                         VALUES (?, ?, ?, ?, NOW())
-                         ON DUPLICATE KEY UPDATE last_activity = NOW()'
+                        'UPDATE users SET session_token=?, session_ip=?, session_ua=?, session_at=NOW() WHERE id=?'
                     )->execute([
                         $sessionId,
-                        $user['id'],
                         $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
-                        substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500)
+                        substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500),
+                        $user['id']
                     ]);
-
-                    // Kill all other sessions
-                    enforceSingleSession($user['id']);
+                    logAudit($user['id'], 'session_displaced', 'users', $user['id'], 'Prior session invalidated by new login');
                 }
 
                 // Update last login

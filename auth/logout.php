@@ -10,11 +10,9 @@ $userId = $_SESSION['user_id'] ?? null;
 
 if ($userId) {
     logAudit($userId, 'logout', 'users', $userId);
-
-    // Delete DB session row
     try {
-        $db = getDB();
-        $db->prepare('DELETE FROM sessions WHERE id = ?')->execute([session_id()]);
+        getDB()->prepare('UPDATE users SET session_token=NULL, session_ip=NULL, session_ua=NULL, session_at=NULL WHERE id=?')
+               ->execute([$userId]);
     } catch (Exception $e) {}
 }
 

@@ -20,19 +20,29 @@ $leaderDriver = null;
 $leaderTeam   = null;
 if ($activeSeason) {
     $stmt = $db->prepare("
-        SELECT p.first_name, p.last_name, p.id AS person_id, ds.points
-        FROM driver_standings ds JOIN people p ON p.id = ds.person_id
-        WHERE ds.season_id = ? AND ds.position = 1
-        LIMIT 1
+        SELECT p.first_name, p.last_name, p.id AS person_id,
+               COALESCE(SUM(rr.points_scored),0) AS points
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN people p ON p.id = re.person_id
+        WHERE r.season_id = ? AND r.status = 'completed'
+        GROUP BY p.id
+        ORDER BY points DESC LIMIT 1
     ");
     $stmt->execute([$activeSeason['id']]);
     $leaderDriver = $stmt->fetch();
 
     $stmt = $db->prepare("
-        SELECT t.name, t.id AS team_id, cs.points
-        FROM constructor_standings cs JOIN teams t ON t.id = cs.team_id
-        WHERE cs.season_id = ? AND cs.position = 1
-        LIMIT 1
+        SELECT t.name, t.id AS team_id, COALESCE(SUM(rr.points_scored),0) AS points
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN team_seasons ts ON ts.id = re.team_season_id
+        JOIN teams t ON t.id = ts.team_id
+        WHERE r.season_id = ? AND r.status = 'completed'
+        GROUP BY t.id
+        ORDER BY points DESC LIMIT 1
     ");
     $stmt->execute([$activeSeason['id']]);
     $leaderTeam = $stmt->fetch();
@@ -75,7 +85,7 @@ renderFlash();
         <div class="stat-value"><?= h((string)$stats['drivers']) ?></div>
         <div class="stat-label">Driver Records</div>
     </a>
-    <a href="<?= APP_URL ?>/admin/results_overview.php" class="stat-card stat-card-link">
+    <a href="<?= APP_URL ?>/admin/races.php" class="stat-card stat-card-link">
         <div class="stat-icon">&#9989;</div>
         <div class="stat-value"><?= h((string)$stats['races']) ?></div>
         <div class="stat-label">Completed Races</div>
@@ -102,7 +112,7 @@ renderFlash();
     <?php if ($leaderDriver): ?>
     <div class="card">
         <div class="card-title">&#127942; Championship Leader — Drivers</div>
-        <a href="<?= APP_URL ?>/admin/person_detail.php?id=<?= $leaderDriver['person_id'] ?>" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:1rem">
+        <a href="<?= APP_URL ?>/admin/people.php?id=<?= $leaderDriver['person_id'] ?>" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:1rem">
             <div>
                 <div style="font-size:1.5rem;font-weight:700"><?= h($leaderDriver['first_name'] . ' ' . $leaderDriver['last_name']) ?></div>
                 <div style="color:var(--accent);font-size:1.1rem;font-weight:600"><?= h(number_format((float)$leaderDriver['points'], 1)) ?> pts</div>
@@ -113,7 +123,7 @@ renderFlash();
     <?php if ($leaderTeam): ?>
     <div class="card">
         <div class="card-title">&#127942; Championship Leader — Constructors</div>
-        <a href="<?= APP_URL ?>/admin/team_detail.php?id=<?= $leaderTeam['team_id'] ?>" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:1rem">
+        <a href="<?= APP_URL ?>/admin/teams.php?id=<?= $leaderTeam['team_id'] ?>" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:1rem">
             <div>
                 <div style="font-size:1.5rem;font-weight:700"><?= h($leaderTeam['name']) ?></div>
                 <div style="color:var(--accent);font-size:1.1rem;font-weight:600"><?= h(number_format((float)$leaderTeam['points'], 1)) ?> pts</div>

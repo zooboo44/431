@@ -167,8 +167,8 @@ renderFlash();
         <?php else: ?>
         <?php foreach ($laps as $lap): ?>
         <tr>
-            <td class="text-muted"><a href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$lap['race_id'] ?>">Rd <?= h((string)$lap['round_number']) ?> <?= h((string)$lap['year']) ?></a></td>
-            <td><a href="<?= APP_URL ?>/team_manager/driver_profile.php?person_id=<?= (int)$lap['person_id'] ?>" style="font-weight:600">#<?= h((string)$lap['racing_number']) ?> <?= h($lap['last_name']) ?></a></td>
+            <td class="text-muted"><a href="<?= APP_URL ?>/shared/results.php?id=<?= (int)$lap['race_id'] ?>">Rd <?= h((string)$lap['round_number']) ?> <?= h((string)$lap['year']) ?></a></td>
+            <td><a href="<?= APP_URL ?>/team_manager/drivers.php?person_id=<?= (int)$lap['person_id'] ?>" style="font-weight:600">#<?= h((string)$lap['racing_number']) ?> <?= h($lap['last_name']) ?></a></td>
             <td><span class="round-chip"><?= h((string)$lap['lap_number']) ?></span></td>
             <td class="text-accent fw-bold"><?= h(formatLapTime($lap['lap_time_ms'])) ?></td>
             <td class="text-muted"><?= $lap['sector1_ms'] ? h(formatLapTime($lap['sector1_ms'])) : '—' ?></td>
@@ -235,8 +235,8 @@ renderFlash();
         <?php foreach ($pitStops as $ps): ?>
         <tr>
             <td><span class="round-chip"><?= h((string)$ps['round_number']) ?></span></td>
-            <td><a href="<?= APP_URL ?>/shared/race_detail.php?id=<?= (int)$ps['race_id'] ?>"><?= h($ps['race_name']) ?></a></td>
-            <td><a href="<?= APP_URL ?>/team_manager/driver_profile.php?person_id=<?= (int)$ps['person_id'] ?>" style="font-weight:600">#<?= h((string)$ps['racing_number']) ?> <?= h($ps['first_name'] . ' ' . $ps['last_name']) ?></a></td>
+            <td><a href="<?= APP_URL ?>/shared/results.php?id=<?= (int)$ps['race_id'] ?>"><?= h($ps['race_name']) ?></a></td>
+            <td><a href="<?= APP_URL ?>/team_manager/drivers.php?person_id=<?= (int)$ps['person_id'] ?>" style="font-weight:600">#<?= h((string)$ps['racing_number']) ?> <?= h($ps['first_name'] . ' ' . $ps['last_name']) ?></a></td>
             <td class="text-accent fw-bold"><?= h((string)$ps['stop_number']) ?></td>
             <td class="text-muted">Lap <?= h((string)$ps['lap_number']) ?></td>
             <td><?= $ps['duration_ms'] ? h(number_format($ps['duration_ms'] / 1000, 3)) . 's' : '—' ?></td>

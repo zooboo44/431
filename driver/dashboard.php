@@ -26,13 +26,46 @@ if (!$driver) {
 // Career season stats (all seasons, for Chart.js)
 $stmt = $db->prepare("
     SELECT s.year, s.id AS season_id, t.id AS team_id, t.name AS team_name,
-           ds_stand.points, ds_stand.wins, ds_stand.podiums, ds_stand.dnfs,
-           ds_stand.fastest_laps, ds_stand.position
+           COALESCE((
+               SELECT SUM(rr2.points_scored)
+               FROM race_results rr2
+               JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+               JOIN races r2 ON r2.id = re2.race_id
+               WHERE r2.season_id = s.id AND r2.status='completed' AND re2.person_id = drs.person_id
+           ),0) AS points,
+           COALESCE((
+               SELECT SUM(CASE WHEN rr2.finish_position=1 AND rr2.is_sprint=0 THEN 1 ELSE 0 END)
+               FROM race_results rr2
+               JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+               JOIN races r2 ON r2.id = re2.race_id
+               WHERE r2.season_id = s.id AND r2.status='completed' AND re2.person_id = drs.person_id
+           ),0) AS wins,
+           COALESCE((
+               SELECT SUM(CASE WHEN rr2.finish_position<=3 AND rr2.finish_position IS NOT NULL AND rr2.is_sprint=0 THEN 1 ELSE 0 END)
+               FROM race_results rr2
+               JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+               JOIN races r2 ON r2.id = re2.race_id
+               WHERE r2.season_id = s.id AND r2.status='completed' AND re2.person_id = drs.person_id
+           ),0) AS podiums,
+           COALESCE((
+               SELECT SUM(CASE WHEN rr2.status='DNF' AND rr2.is_sprint=0 THEN 1 ELSE 0 END)
+               FROM race_results rr2
+               JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+               JOIN races r2 ON r2.id = re2.race_id
+               WHERE r2.season_id = s.id AND r2.status='completed' AND re2.person_id = drs.person_id
+           ),0) AS dnfs,
+           COALESCE((
+               SELECT SUM(CASE WHEN rr2.fastest_lap_bonus=1 THEN 1 ELSE 0 END)
+               FROM race_results rr2
+               JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+               JOIN races r2 ON r2.id = re2.race_id
+               WHERE r2.season_id = s.id AND r2.status='completed' AND re2.person_id = drs.person_id
+           ),0) AS fastest_laps,
+           NULL AS position
     FROM driver_seasons drs
     JOIN seasons s ON s.id = drs.season_id
     JOIN team_seasons ts ON ts.id = drs.team_season_id
     JOIN teams t ON t.id = ts.team_id
-    LEFT JOIN driver_standings ds_stand ON ds_stand.person_id = drs.person_id AND ds_stand.season_id = s.id
     WHERE drs.person_id = ?
     ORDER BY s.year ASC
 ");
@@ -181,12 +214,12 @@ if ($activeSeasonId) {
             <?php foreach (array_reverse($seasonStats) as $ss): ?>
             <tr>
                 <td><strong><?= h((string)$ss['year']) ?></strong></td>
-                <td><a href="<?= APP_URL ?>/shared/team_detail.php?id=<?= (int)$ss['team_id'] ?>" class="text-muted"><?= h($ss['team_name']) ?></a></td>
+                <td><a href="<?= APP_URL ?>/shared/standings.php?view=team&id=<?= (int)$ss['team_id'] ?>" class="text-muted"><?= h($ss['team_name']) ?></a></td>
                 <td><?= $ss['position'] ? 'P' . h((string)$ss['position']) : '—' ?></td>
                 <td class="text-accent fw-bold"><?= h(number_format((float)($ss['points'] ?? 0), 1)) ?></td>
                 <td><?= h((string)($ss['wins'] ?? 0)) ?></td>
                 <td><?= h((string)($ss['podiums'] ?? 0)) ?></td>
-                <td><a href="<?= APP_URL ?>/driver/season.php?season_id=<?= $ss['season_id'] ?>" class="btn btn-outline btn-sm">View</a></td>
+                <td><a href="<?= APP_URL ?>/shared/standings.php?season=<?= $ss['season_id'] ?>" class="btn btn-outline btn-sm">View</a></td>
             </tr>
             <?php endforeach; ?>
             </tbody>
@@ -202,12 +235,12 @@ if ($activeSeasonId) {
     <div class="empty-state"><p>No results yet.</p></div>
     <?php else: ?>
     <table>
-        <thead><tr><th>Year</th><th>Race</th><th>Grid</th><th>Finish</th><th>Status</th><th>Points</th><th></th></tr></thead>
+        <thead><tr><th>Year</th><th>Race</th><th>Grid</th><th>Finish</th><th>Status</th><th>Points</th></tr></thead>
         <tbody>
         <?php foreach ($recentResults as $r): ?>
-        <tr class="clickable-row" data-href="<?= APP_URL ?>/driver/race.php?race_id=<?= (int)$r['race_id'] ?>">
+        <tr class="clickable-row" data-href="<?= APP_URL ?>/shared/results.php?id=<?= (int)$r['race_id'] ?>">
             <td class="text-muted"><?= h((string)$r['year']) ?></td>
-            <td><a href="<?= APP_URL ?>/driver/race.php?race_id=<?= (int)$r['race_id'] ?>" style="font-weight:600">Rd <?= h((string)$r['round_number']) ?> <?= h($r['race_name']) ?></a></td>
+            <td style="font-weight:600">Rd <?= h((string)$r['round_number']) ?> <?= h($r['race_name']) ?></td>
             <td class="text-muted"><?= $r['grid_position'] ? 'P' . h((string)$r['grid_position']) : '—' ?></td>
             <td>
                 <?php if ($r['finish_position']): ?>
@@ -221,6 +254,57 @@ if ($activeSeasonId) {
         <?php endforeach; ?>
         </tbody>
     </table>
+    <?php endif; ?>
+</div>
+
+<!-- Penalties -->
+<?php
+$penStmt = $db->prepare("
+    SELECT pen.penalty_type, pen.reason, pen.time_penalty_s, pen.grid_penalty_positions,
+           pen.licence_points_awarded, pen.is_dsq, pen.issued_at,
+           r.name AS race_name, r.round_number, s.year,
+           u.name AS issued_by_name
+    FROM penalties pen
+    JOIN races r ON r.id = pen.race_id
+    JOIN seasons s ON s.id = r.season_id
+    JOIN users u ON u.id = pen.issued_by
+    WHERE pen.person_id = ?
+    ORDER BY pen.issued_at DESC
+");
+$penStmt->execute([$personId]);
+$myPenalties = $penStmt->fetchAll();
+$totalLicPts = array_sum(array_column($myPenalties, 'licence_points_awarded'));
+$dsqCount    = count(array_filter($myPenalties, fn($p) => $p['is_dsq']));
+?>
+<div class="card" style="margin-top:1.5rem" id="penalties">
+    <div class="card-title">&#9888; Penalties (<?= count($myPenalties) ?>)</div>
+    <?php if ($totalLicPts > 0 || $dsqCount > 0): ?>
+    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:1rem;max-width:400px">
+        <div class="stat-card"><div class="stat-value text-warning"><?= h((string)$totalLicPts) ?></div><div class="stat-label">Licence Points</div></div>
+        <div class="stat-card"><div class="stat-value"><?= h((string)$dsqCount) ?></div><div class="stat-label">Disqualifications</div></div>
+    </div>
+    <?php endif; ?>
+    <?php if (empty($myPenalties)): ?>
+    <div class="empty-state"><p>No penalties on record. Keep it clean!</p></div>
+    <?php else: ?>
+    <?php foreach ($myPenalties as $pen): ?>
+    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;margin-bottom:0.5rem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem">
+            <div>
+                <span class="status-badge status-<?= $pen['is_dsq'] ? 'dsq' : 'warning' ?>"><?= h(str_replace('_', ' ', strtoupper($pen['penalty_type']))) ?></span>
+                <span class="text-muted" style="margin-left:0.5rem;font-size:0.85rem"><?= h((string)$pen['year']) ?> Rd <?= h((string)$pen['round_number']) ?> — <?= h($pen['race_name']) ?></span>
+            </div>
+            <span class="text-muted" style="font-size:0.8rem"><?= h(date('d M Y', strtotime($pen['issued_at']))) ?></span>
+        </div>
+        <p style="margin:0.5rem 0 0.3rem;color:var(--text-secondary)"><?= h($pen['reason']) ?></p>
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.85rem">
+            <?php if ($pen['time_penalty_s']): ?><span><strong>+<?= h((string)$pen['time_penalty_s']) ?>s</strong> time penalty</span><?php endif; ?>
+            <?php if ($pen['grid_penalty_positions']): ?><span><strong><?= h((string)$pen['grid_penalty_positions']) ?> place<?= $pen['grid_penalty_positions'] != 1 ? 's' : '' ?></strong> grid drop</span><?php endif; ?>
+            <?php if ($pen['licence_points_awarded']): ?><span class="text-warning"><strong><?= h((string)$pen['licence_points_awarded']) ?> licence point<?= $pen['licence_points_awarded'] != 1 ? 's' : '' ?></strong></span><?php endif; ?>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem">Issued by <?= h($pen['issued_by_name']) ?></div>
+    </div>
+    <?php endforeach; ?>
     <?php endif; ?>
 </div>
 

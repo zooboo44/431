@@ -14,7 +14,7 @@ if ($user['linked_id']) {
         $stmt->execute([$user['linked_id']]);
         $row = $stmt->fetch();
         $linkedName = $row['n'] ?? '—';
-    } elseif (in_array($user['role'], ['team_manager', 'engineer'])) {
+    } elseif ($user['role'] === 'team_manager') {
         $stmt = $db->prepare('SELECT name FROM teams WHERE id = ?');
         $stmt->execute([$user['linked_id']]);
         $row = $stmt->fetch();

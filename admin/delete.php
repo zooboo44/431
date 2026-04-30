@@ -109,8 +109,8 @@ switch ($entity) {
 
     case 'sprint_result':
         if ($id <= 0) break;
-        $db->prepare('DELETE FROM sprint_results WHERE id = ?')->execute([$id]);
-        logAudit($_SESSION['user_id'], 'delete', 'sprint_results', $id, 'Sprint result deleted');
+        $db->prepare('DELETE FROM race_results WHERE id = ? AND is_sprint = 1')->execute([$id]);
+        logAudit($_SESSION['user_id'], 'delete', 'race_results', $id, 'Sprint result deleted');
         redirectWithMessage($returnTo, 'success', 'Sprint result deleted.');
 
     case 'race_entry':

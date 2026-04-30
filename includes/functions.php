@@ -42,84 +42,23 @@ function calculateSprintPoints(int $position): float {
 }
 
 function recalculateStandings(int $seasonId): void {
+    // Standings are now computed live from race_results.
+    // Only team_seasons.total_points needs a denormalised update for sorting.
     $db = getDB();
-
-    // Driver standings
-    $stmt = $db->prepare("
-        SELECT
-            p.id AS person_id,
-            COALESCE(SUM(rr.points_scored), 0) AS points,
-            SUM(CASE WHEN rr.finish_position = 1 THEN 1 ELSE 0 END) AS wins,
-            SUM(CASE WHEN rr.finish_position <= 3 AND rr.finish_position IS NOT NULL THEN 1 ELSE 0 END) AS podiums,
-            SUM(CASE WHEN rr.status = 'DNF' THEN 1 ELSE 0 END) AS dnfs,
-            SUM(CASE WHEN rr.fastest_lap_bonus = 1 THEN 1 ELSE 0 END) AS fastest_laps
-        FROM people p
-        JOIN driver_seasons ds ON ds.person_id = p.id AND ds.season_id = ?
-        JOIN race_entries re ON re.person_id = p.id
-        JOIN races r ON r.id = re.race_id AND r.season_id = ?
-        LEFT JOIN race_results rr ON rr.race_entry_id = re.id
-        GROUP BY p.id
-    ");
-    $stmt->execute([$seasonId, $seasonId]);
-    $driverRows = $stmt->fetchAll();
-
-    usort($driverRows, fn($a, $b) =>
-        $b['points'] <=> $a['points'] ?: $b['wins'] <=> $a['wins']
-    );
-
-    foreach ($driverRows as $pos => $row) {
-        $position = $pos + 1;
-        $db->prepare("
-            INSERT INTO driver_standings (season_id, person_id, points, wins, podiums, dnfs, fastest_laps, position)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                points=VALUES(points), wins=VALUES(wins), podiums=VALUES(podiums),
-                dnfs=VALUES(dnfs), fastest_laps=VALUES(fastest_laps), position=VALUES(position)
-        ")->execute([
-            $seasonId, $row['person_id'], $row['points'], $row['wins'],
-            $row['podiums'], $row['dnfs'], $row['fastest_laps'], $position
-        ]);
-    }
-
-    // Constructor standings
-    $stmt = $db->prepare("
-        SELECT
-            t.id AS team_id,
-            COALESCE(SUM(rr.points_scored), 0) AS points,
-            SUM(CASE WHEN rr.finish_position = 1 THEN 1 ELSE 0 END) AS wins
-        FROM teams t
-        JOIN team_seasons ts ON ts.team_id = t.id AND ts.season_id = ?
-        JOIN race_entries re ON re.team_season_id = ts.id
-        JOIN races r ON r.id = re.race_id AND r.season_id = ?
-        LEFT JOIN race_results rr ON rr.race_entry_id = re.id
-        GROUP BY t.id
-    ");
-    $stmt->execute([$seasonId, $seasonId]);
-    $constructorRows = $stmt->fetchAll();
-
-    usort($constructorRows, fn($a, $b) =>
-        $b['points'] <=> $a['points'] ?: $b['wins'] <=> $a['wins']
-    );
-
-    foreach ($constructorRows as $pos => $row) {
-        $position = $pos + 1;
-        $db->prepare("
-            INSERT INTO constructor_standings (season_id, team_id, points, wins, position)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE points=VALUES(points), wins=VALUES(wins), position=VALUES(position)
-        ")->execute([
-            $seasonId, $row['team_id'], $row['points'], $row['wins'], $position
-        ]);
-    }
-
-    // Update team_seasons total_points
     $db->prepare("
         UPDATE team_seasons ts
-        JOIN constructor_standings cs ON cs.team_id = ts.team_id AND cs.season_id = ts.season_id
-        SET ts.total_points = cs.points
+        SET ts.total_points = (
+            SELECT COALESCE(SUM(rr.points_scored), 0)
+            FROM race_results rr
+            JOIN race_entries re ON re.id = rr.race_entry_id
+            JOIN races r ON r.id = re.race_id
+            WHERE r.season_id = ts.season_id AND r.status = 'completed'
+              AND re.team_season_id = ts.id
+        )
         WHERE ts.season_id = ?
     ")->execute([$seasonId]);
 }
+
 
 function logAudit(
     int|null $userId,

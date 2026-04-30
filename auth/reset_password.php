@@ -17,36 +17,24 @@ $success  = false;
 $tokenRow = null;
 
 if ($rawToken) {
-    // Look up the token (SELECT...FOR UPDATE inside a transaction)
-    $db->beginTransaction();
-    try {
-        $stmt = $db->prepare(
-            "SELECT id, user_id, used_at, expires_at
-             FROM password_reset_tokens
-             WHERE token_hash = SHA2(?, 256)
-             FOR UPDATE"
-        );
-        $stmt->execute([$rawToken]);
-        $tokenRow = $stmt->fetch();
+    $stmt = $db->prepare(
+        "SELECT id, reset_token_used_at, reset_token_expires
+         FROM users
+         WHERE reset_token_hash = SHA2(?, 256) AND is_active = 1
+         LIMIT 1"
+    );
+    $stmt->execute([$rawToken]);
+    $tokenRow = $stmt->fetch();
 
-        if (!$tokenRow) {
-            $errors[] = 'Invalid or expired reset token.';
-            $db->rollBack();
-            $tokenRow = null;
-        } elseif ($tokenRow['used_at'] !== null) {
-            $errors[] = 'This reset token has already been used.';
-            $db->rollBack();
-            $tokenRow = null;
-        } elseif (strtotime($tokenRow['expires_at']) < time()) {
-            $errors[] = 'This reset token has expired.';
-            $db->rollBack();
-            $tokenRow = null;
-        } else {
-            $db->rollBack(); // Keep token row for POST handling
-        }
-    } catch (Exception $e) {
-        $db->rollBack();
-        $errors[] = 'An error occurred. Please try again.';
+    if (!$tokenRow) {
+        $errors[] = 'Invalid or expired reset token.';
+        $tokenRow = null;
+    } elseif ($tokenRow['reset_token_used_at'] !== null) {
+        $errors[] = 'This reset token has already been used.';
+        $tokenRow = null;
+    } elseif (strtotime($tokenRow['reset_token_expires']) < time()) {
+        $errors[] = 'This reset token has expired.';
+        $tokenRow = null;
     }
 } else {
     $errors[] = 'No reset token provided.';
@@ -56,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tokenRow) {
     if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
         $errors[] = 'Invalid request.';
     } else {
-        $newPass    = $_POST['new_password'] ?? '';
+        $newPass     = $_POST['new_password'] ?? '';
         $confirmPass = $_POST['confirm_password'] ?? '';
 
         $passError = validatePassword($newPass);
@@ -65,38 +53,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tokenRow) {
         } elseif ($newPass !== $confirmPass) {
             $errors[] = 'Passwords do not match.';
         } else {
-            // Atomic redemption
             $db->beginTransaction();
             try {
+                // Re-check token under lock
                 $stmt = $db->prepare(
-                    "SELECT id, user_id, used_at, expires_at
-                     FROM password_reset_tokens
-                     WHERE token_hash = SHA2(?, 256)
+                    "SELECT id, reset_token_used_at, reset_token_expires
+                     FROM users
+                     WHERE reset_token_hash = SHA2(?, 256) AND is_active = 1
                      FOR UPDATE"
                 );
                 $stmt->execute([$rawToken]);
                 $tokenCheck = $stmt->fetch();
 
-                if (!$tokenCheck || $tokenCheck['used_at'] !== null || strtotime($tokenCheck['expires_at']) < time()) {
+                if (!$tokenCheck || $tokenCheck['reset_token_used_at'] !== null || strtotime($tokenCheck['reset_token_expires']) < time()) {
                     $errors[] = 'Token is no longer valid (possibly used concurrently).';
                     $db->rollBack();
                 } else {
-                    // Mark token used
-                    $db->prepare('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = ?')
-                       ->execute([$tokenCheck['id']]);
-
-                    // Update password
                     $hash = password_hash($newPass, PASSWORD_BCRYPT, ['cost' => 12]);
-                    $db->prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?')
-                       ->execute([$hash, $tokenCheck['user_id']]);
-
-                    // Delete all sessions for user
-                    $db->prepare('DELETE FROM sessions WHERE user_id = ?')
-                       ->execute([$tokenCheck['user_id']]);
+                    $db->prepare(
+                        'UPDATE users SET password_hash=?, must_change_password=0,
+                         reset_token_used_at=NOW(),
+                         session_token=NULL, session_ip=NULL, session_ua=NULL, session_at=NULL
+                         WHERE id=?'
+                    )->execute([$hash, $tokenCheck['id']]);
 
                     $db->commit();
-
-                    logAudit($tokenCheck['user_id'], 'password_reset_redeemed', 'users', $tokenCheck['user_id']);
+                    logAudit($tokenCheck['id'], 'password_reset_redeemed', 'users', $tokenCheck['id']);
                     $success = true;
                 }
             } catch (Exception $e) {

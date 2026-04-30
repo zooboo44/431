@@ -26,9 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCSRFToken($_POST['csrf_token'] ?? '')) {
         $errors[] = 'Invalid request token.';
     } else {
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-
-        // Rate limit: max 3 per user per hour
+        // Rate limit: max 3 per user per hour via audit_log
         $stmt = $db->prepare("
             SELECT COUNT(*) FROM audit_log
             WHERE action = 'password_reset_requested' AND resource_id = ?
@@ -40,17 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($recentCount >= RESET_TOKEN_MAX_REQUESTS) {
             $errors[] = 'Rate limit reached: maximum ' . RESET_TOKEN_MAX_REQUESTS . ' reset tokens per hour per user.';
         } else {
-            // Invalidate old unused tokens
-            $db->prepare("UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL")
-               ->execute([$targetUserId]);
-
-            // Generate token
             $rawToken  = bin2hex(random_bytes(32));
             $tokenHash = hash('sha256', $rawToken);
             $expiresAt = date('Y-m-d H:i:s', time() + (RESET_TOKEN_EXPIRY_HOURS * 3600));
 
-            $db->prepare("INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)")
-               ->execute([$targetUserId, $tokenHash, $expiresAt]);
+            $db->prepare("UPDATE users SET reset_token_hash=?, reset_token_expires=?, reset_token_used_at=NULL WHERE id=?")
+               ->execute([$tokenHash, $expiresAt, $targetUserId]);
 
             logAudit($_SESSION['user_id'], 'password_reset_requested', 'users', $targetUserId,
                 "Reset token generated for user #{$targetUserId}");
@@ -102,7 +95,7 @@ $csrfToken = generateCSRFToken();
 <div class="card" style="max-width:500px">
     <div class="card-title">Confirm Token Generation</div>
     <p class="mb-2" style="color:var(--text-secondary)">
-        This will invalidate any existing unused tokens for <strong><?= h($targetUser['name']) ?></strong>
+        This will overwrite any existing unused token for <strong><?= h($targetUser['name']) ?></strong>
         and generate a new one-time reset link.
     </p>
     <div class="notice">Rate limit: maximum <?= RESET_TOKEN_MAX_REQUESTS ?> tokens per user per hour.</div>

@@ -10,13 +10,6 @@ function startSecureSession(): void {
         ini_set('session.cookie_samesite', 'Lax');
         ini_set('session.use_strict_mode', 1);
         session_start();
-        // Probabilistic cleanup of expired DB session rows (1-in-100 requests)
-        if (mt_rand(1, 100) === 1) {
-            try {
-                getDB()->prepare('DELETE FROM sessions WHERE last_activity < DATE_SUB(NOW(), INTERVAL 30 MINUTE)')
-                       ->execute();
-            } catch (Exception $e) {}
-        }
     }
 }
 
@@ -25,9 +18,11 @@ function checkSessionTimeout(): void {
 
     $lastActivity = $_SESSION['last_activity'] ?? 0;
     if (time() - $lastActivity > SESSION_TIMEOUT) {
-        $sessionId = session_id();
-        $db = getDB();
-        $db->prepare('DELETE FROM sessions WHERE id = ?')->execute([$sessionId]);
+        $userId = $_SESSION['user_id'];
+        try {
+            getDB()->prepare('UPDATE users SET session_token=NULL, session_ip=NULL, session_ua=NULL, session_at=NULL WHERE id=?')
+                   ->execute([$userId]);
+        } catch (Exception $e) {}
         session_unset();
         session_destroy();
         header('Location: ' . APP_URL . '/auth/login.php?timeout=1');
@@ -79,7 +74,6 @@ function currentUser(): ?array {
     return $user;
 }
 
-
 function generateCSRFToken(): string {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -96,25 +90,6 @@ function rotateCSRFToken(): void {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-function enforceSingleSession(int $userId): void {
-    $db = getDB();
-    $currentSessionId = session_id();
-
-    // Log all displaced sessions
-    $stmt = $db->prepare('SELECT id FROM sessions WHERE user_id = ? AND id != ?');
-    $stmt->execute([$userId, $currentSessionId]);
-    $displaced = $stmt->fetchAll();
-
-    if ($displaced) {
-        logAudit($userId, 'session_displaced', 'users', $userId,
-            count($displaced) . ' prior session(s) terminated');
-    }
-
-    // Kill all prior sessions for this user
-    $stmt = $db->prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?');
-    $stmt->execute([$userId, $currentSessionId]);
-}
-
 function checkDisplacedSession(): void {
     if (empty($_SESSION['user_id'])) return;
 
@@ -122,11 +97,11 @@ function checkDisplacedSession(): void {
     if (!in_array($role, RESTRICTED_ROLES, true)) return;
 
     $db = getDB();
-    $sessionId = session_id();
-    $stmt = $db->prepare('SELECT id FROM sessions WHERE id = ? AND user_id = ?');
-    $stmt->execute([$sessionId, $_SESSION['user_id']]);
+    $stmt = $db->prepare('SELECT session_token FROM users WHERE id = ? AND is_active = 1');
+    $stmt->execute([$_SESSION['user_id']]);
+    $row = $stmt->fetch();
 
-    if (!$stmt->fetch()) {
+    if (!$row || $row['session_token'] !== session_id()) {
         session_unset();
         session_destroy();
         header('Location: ' . APP_URL . '/auth/login.php?displaced=1');

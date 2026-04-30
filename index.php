@@ -18,27 +18,37 @@ $topConstructors = [];
 if ($seasonId) {
     // Driver leader
     $stmt = $db->prepare("
-        SELECT ds.points, ds.wins, ds.position,
+        SELECT COALESCE(SUM(rr.points_scored),0) AS points,
+               SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS wins,
+               1 AS position,
                p.first_name, p.last_name, p.racing_number,
                t.name AS team_name, t.short_name
-        FROM driver_standings ds
-        JOIN people p ON p.id = ds.person_id
-        JOIN driver_seasons drs ON drs.person_id = p.id AND drs.season_id = ?
-        JOIN team_seasons ts ON ts.id = drs.team_season_id
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN people p ON p.id = re.person_id
+        JOIN team_seasons ts ON ts.id = re.team_season_id
         JOIN teams t ON t.id = ts.team_id
-        WHERE ds.season_id = ?
-        ORDER BY ds.position ASC LIMIT 1
+        WHERE r.season_id = ? AND r.status = 'completed'
+        GROUP BY p.id, t.id
+        ORDER BY points DESC, wins DESC LIMIT 1
     ");
-    $stmt->execute([$seasonId, $seasonId]);
+    $stmt->execute([$seasonId]);
     $driverLeader = $stmt->fetch();
 
     // Constructor leader
     $stmt = $db->prepare("
-        SELECT cs.points, cs.wins, cs.position, t.name, t.short_name
-        FROM constructor_standings cs
-        JOIN teams t ON t.id = cs.team_id
-        WHERE cs.season_id = ?
-        ORDER BY cs.position ASC LIMIT 1
+        SELECT COALESCE(SUM(rr.points_scored),0) AS points,
+               SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS wins,
+               1 AS position, t.name, t.short_name
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN team_seasons ts ON ts.id = re.team_season_id
+        JOIN teams t ON t.id = ts.team_id
+        WHERE r.season_id = ? AND r.status = 'completed'
+        GROUP BY t.id
+        ORDER BY points DESC, wins DESC LIMIT 1
     ");
     $stmt->execute([$seasonId]);
     $constructorLeader = $stmt->fetch();
@@ -67,27 +77,40 @@ if ($seasonId) {
 
     // Top 5 drivers
     $stmt = $db->prepare("
-        SELECT ds.position, ds.points, ds.wins,
+        SELECT RANK() OVER (ORDER BY COALESCE(SUM(rr.points_scored),0) DESC,
+                            SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) DESC) AS position,
+               COALESCE(SUM(rr.points_scored),0) AS points,
+               SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS wins,
                p.first_name, p.last_name, p.racing_number,
                t.name AS team_name, t.short_name
-        FROM driver_standings ds
-        JOIN people p ON p.id = ds.person_id
-        JOIN driver_seasons drs ON drs.person_id = p.id AND drs.season_id = ?
-        JOIN team_seasons ts ON ts.id = drs.team_season_id
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN people p ON p.id = re.person_id
+        JOIN team_seasons ts ON ts.id = re.team_season_id
         JOIN teams t ON t.id = ts.team_id
-        WHERE ds.season_id = ?
-        ORDER BY ds.position ASC LIMIT 5
+        WHERE r.season_id = ? AND r.status = 'completed'
+        GROUP BY p.id, t.id
+        ORDER BY points DESC, wins DESC LIMIT 5
     ");
-    $stmt->execute([$seasonId, $seasonId]);
+    $stmt->execute([$seasonId]);
     $topDrivers = $stmt->fetchAll();
 
     // Top 5 constructors
     $stmt = $db->prepare("
-        SELECT cs.position, cs.points, cs.wins, t.name, t.short_name
-        FROM constructor_standings cs
-        JOIN teams t ON t.id = cs.team_id
-        WHERE cs.season_id = ?
-        ORDER BY cs.position ASC LIMIT 5
+        SELECT RANK() OVER (ORDER BY COALESCE(SUM(rr.points_scored),0) DESC,
+                            SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) DESC) AS position,
+               COALESCE(SUM(rr.points_scored),0) AS points,
+               SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS wins,
+               t.name, t.short_name
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN team_seasons ts ON ts.id = re.team_season_id
+        JOIN teams t ON t.id = ts.team_id
+        WHERE r.season_id = ? AND r.status = 'completed'
+        GROUP BY t.id
+        ORDER BY points DESC, wins DESC LIMIT 5
     ");
     $stmt->execute([$seasonId]);
     $topConstructors = $stmt->fetchAll();
@@ -103,7 +126,7 @@ if ($seasonId) {
             JOIN people p ON p.id = re.person_id
             JOIN team_seasons ts ON ts.id = re.team_season_id
             JOIN teams t ON t.id = ts.team_id
-            WHERE re.race_id = ? AND rr.finish_position IS NOT NULL
+            WHERE re.race_id = ? AND rr.finish_position IS NOT NULL AND rr.is_sprint = 0
             ORDER BY rr.finish_position ASC LIMIT 3
         ");
         $stmt->execute([$latestRace['id']]);
@@ -118,8 +141,8 @@ if ($seasonId) {
             <?= $activeSeason ? h((string)$activeSeason['year']) . ' Formula 1 World Championship' : 'Formula 1 Race Management Portal' ?>
         </p>
         <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem">
-            <a href="<?= APP_URL ?>/public/standings.php" class="btn btn-primary">View Standings</a>
-            <a href="<?= APP_URL ?>/public/results.php" class="btn btn-outline">Race Results</a>
+            <a href="<?= APP_URL ?>/shared/standings.php" class="btn btn-primary">View Standings</a>
+            <a href="<?= APP_URL ?>/shared/results.php" class="btn btn-outline">Race Results</a>
         </div>
     </div>
 </section>
@@ -167,7 +190,7 @@ if ($seasonId) {
                 <?php endforeach; ?>
             </table>
             <?php endif; ?>
-            <a href="<?= APP_URL ?>/public/race_detail.php?id=<?= $latestRace['id'] ?>" class="btn btn-outline btn-sm" style="margin-top:0.75rem">Full Results &rarr;</a>
+            <a href="<?= APP_URL ?>/shared/results.php?id=<?= $latestRace['id'] ?>" class="btn btn-outline btn-sm" style="margin-top:0.75rem">Full Results &rarr;</a>
         </div>
         <?php endif; ?>
 
@@ -189,7 +212,7 @@ if ($seasonId) {
                     <div class="info-value"><?= h(date('d M Y', strtotime($nextRace['race_date']))) ?></div>
                 </div>
             </div>
-            <a href="<?= APP_URL ?>/public/circuits.php" class="btn btn-outline btn-sm" style="margin-top:1rem">View Circuit &rarr;</a>
+            <a href="<?= APP_URL ?>/shared/circuits.php" class="btn btn-outline btn-sm" style="margin-top:1rem">View Circuit &rarr;</a>
         </div>
         <?php endif; ?>
     </div>
@@ -198,7 +221,7 @@ if ($seasonId) {
     <div class="grid-2">
         <?php if ($topDrivers): ?>
         <div class="card">
-            <div class="card-title">Driver Standings — Top 5 <a href="<?= APP_URL ?>/public/standings.php" class="btn btn-outline btn-sm">Full Table</a></div>
+            <div class="card-title">Driver Standings — Top 5 <a href="<?= APP_URL ?>/shared/standings.php" class="btn btn-outline btn-sm">Full Table</a></div>
             <table class="sortable">
                 <thead><tr>
                     <th>Pos</th><th>Driver</th><th>Team</th><th>Pts</th>
@@ -219,7 +242,7 @@ if ($seasonId) {
 
         <?php if ($topConstructors): ?>
         <div class="card">
-            <div class="card-title">Constructor Standings — Top 5 <a href="<?= APP_URL ?>/public/standings.php" class="btn btn-outline btn-sm">Full Table</a></div>
+            <div class="card-title">Constructor Standings — Top 5 <a href="<?= APP_URL ?>/shared/standings.php" class="btn btn-outline btn-sm">Full Table</a></div>
             <table class="sortable">
                 <thead><tr>
                     <th>Pos</th><th>Constructor</th><th>Pts</th>

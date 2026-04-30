@@ -21,20 +21,28 @@ if (isset($_GET['export'])) {
     $type = $_GET['export'];
     header('Content-Type: text/csv; charset=UTF-8');
     header('Content-Disposition: attachment; filename="' . ($type === 'drivers' ? 'driver' : 'constructor') . '_standings_' . $selectedYear . '.csv"');
-    echo "\xEF\xBB\xBF"; // UTF-8 BOM
-
+    echo "\xEF\xBB\xBF";
     $out = fopen('php://output', 'w');
     if ($type === 'drivers') {
         fputcsv($out, ['Pos','Driver','#','Nationality','Team','Points','Wins','Podiums','Fastest Laps','DNFs']);
         $stmt = $db->prepare("
-            SELECT ds.position, p.first_name, p.last_name, p.racing_number, p.nationality,
-                   t.name AS team_name, ds.points, ds.wins, ds.podiums, ds.fastest_laps, ds.dnfs
-            FROM driver_standings ds
-            JOIN people p ON p.id = ds.person_id
-            JOIN driver_seasons drs ON drs.person_id = p.id AND drs.season_id = ds.season_id
-            JOIN team_seasons ts ON ts.id = drs.team_season_id
+            SELECT RANK() OVER (ORDER BY COALESCE(SUM(rr.points_scored),0) DESC,
+                                SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) DESC) AS position,
+                   p.first_name, p.last_name, p.racing_number, p.nationality,
+                   t.name AS team_name,
+                   COALESCE(SUM(rr.points_scored),0) AS points,
+                   SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS wins,
+                   SUM(CASE WHEN rr.finish_position<=3 AND rr.finish_position IS NOT NULL AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS podiums,
+                   SUM(CASE WHEN rr.fastest_lap_bonus=1 THEN 1 ELSE 0 END) AS fastest_laps,
+                   SUM(CASE WHEN rr.status='DNF' AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS dnfs
+            FROM race_results rr
+            JOIN race_entries re ON re.id = rr.race_entry_id
+            JOIN races r ON r.id = re.race_id
+            JOIN people p ON p.id = re.person_id
+            JOIN team_seasons ts ON ts.id = re.team_season_id
             JOIN teams t ON t.id = ts.team_id
-            WHERE ds.season_id = ? ORDER BY ds.position ASC
+            WHERE r.season_id = ? AND r.status = 'completed'
+            GROUP BY p.id, t.id ORDER BY points DESC, wins DESC
         ");
         $stmt->execute([$selectedSeasonId]);
         foreach ($stmt->fetchAll() as $row) {
@@ -43,9 +51,18 @@ if (isset($_GET['export'])) {
     } else {
         fputcsv($out, ['Pos','Team','Nationality','Points','Wins']);
         $stmt = $db->prepare("
-            SELECT cs.position, t.name, t.nationality, cs.points, cs.wins
-            FROM constructor_standings cs JOIN teams t ON t.id=cs.team_id
-            WHERE cs.season_id = ? ORDER BY cs.position ASC
+            SELECT RANK() OVER (ORDER BY COALESCE(SUM(rr.points_scored),0) DESC,
+                                SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) DESC) AS position,
+                   t.name, t.nationality,
+                   COALESCE(SUM(rr.points_scored),0) AS points,
+                   SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS wins
+            FROM race_results rr
+            JOIN race_entries re ON re.id = rr.race_entry_id
+            JOIN races r ON r.id = re.race_id
+            JOIN team_seasons ts ON ts.id = re.team_season_id
+            JOIN teams t ON t.id = ts.team_id
+            WHERE r.season_id = ? AND r.status = 'completed'
+            GROUP BY t.id ORDER BY points DESC, wins DESC
         ");
         $stmt->execute([$selectedSeasonId]);
         foreach ($stmt->fetchAll() as $row) {
@@ -61,23 +78,42 @@ $constructorStandings = [];
 
 if ($selectedSeasonId) {
     $stmt = $db->prepare("
-        SELECT ds.position, ds.points, ds.wins, ds.podiums, ds.dnfs, ds.fastest_laps,
-               p.first_name, p.last_name, p.racing_number, p.nationality, p.id AS person_id,
+        SELECT RANK() OVER (ORDER BY COALESCE(SUM(rr.points_scored),0) DESC,
+                            SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) DESC) AS position,
+               COALESCE(SUM(rr.points_scored),0) AS points,
+               SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS wins,
+               SUM(CASE WHEN rr.finish_position<=3 AND rr.finish_position IS NOT NULL AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS podiums,
+               SUM(CASE WHEN rr.status='DNF' AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS dnfs,
+               SUM(CASE WHEN rr.fastest_lap_bonus=1 THEN 1 ELSE 0 END) AS fastest_laps,
+               p.id AS person_id, p.first_name, p.last_name, p.racing_number, p.nationality,
                t.name AS team_name, t.short_name
-        FROM driver_standings ds
-        JOIN people p ON p.id = ds.person_id
-        JOIN driver_seasons drs ON drs.person_id = p.id AND drs.season_id = ds.season_id
-        JOIN team_seasons ts ON ts.id = drs.team_season_id
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN people p ON p.id = re.person_id
+        JOIN team_seasons ts ON ts.id = re.team_season_id
         JOIN teams t ON t.id = ts.team_id
-        WHERE ds.season_id = ? ORDER BY ds.position ASC
+        WHERE r.season_id = ? AND r.status = 'completed'
+        GROUP BY p.id, t.id
+        ORDER BY points DESC, wins DESC
     ");
     $stmt->execute([$selectedSeasonId]);
     $driverStandings = $stmt->fetchAll();
 
     $stmt = $db->prepare("
-        SELECT cs.position, cs.points, cs.wins, t.name, t.short_name, t.nationality, t.id AS team_id
-        FROM constructor_standings cs JOIN teams t ON t.id = cs.team_id
-        WHERE cs.season_id = ? ORDER BY cs.position ASC
+        SELECT RANK() OVER (ORDER BY COALESCE(SUM(rr.points_scored),0) DESC,
+                            SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) DESC) AS position,
+               COALESCE(SUM(rr.points_scored),0) AS points,
+               SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS wins,
+               t.id AS team_id, t.name, t.short_name, t.nationality
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN team_seasons ts ON ts.id = re.team_season_id
+        JOIN teams t ON t.id = ts.team_id
+        WHERE r.season_id = ? AND r.status = 'completed'
+        GROUP BY t.id
+        ORDER BY points DESC, wins DESC
     ");
     $stmt->execute([$selectedSeasonId]);
     $constructorStandings = $stmt->fetchAll();
@@ -116,7 +152,7 @@ renderFlash();
         </tr></thead>
         <tbody>
         <?php foreach ($driverStandings as $d): ?>
-        <tr class="clickable-row" data-href="<?= APP_URL ?>/admin/person_detail.php?id=<?= $d['person_id'] ?>">
+        <tr class="clickable-row" data-href="<?= APP_URL ?>/admin/people.php?id=<?= $d['person_id'] ?>">
             <td><span class="position-badge pos-<?= $d['position'] <= 3 ? $d['position'] : 'other' ?>"><?= h((string)$d['position']) ?></span></td>
             <td>
                 <strong>#<?= h((string)$d['racing_number']) ?> <?= h($d['first_name'] . ' ' . $d['last_name']) ?></strong>
@@ -148,7 +184,7 @@ renderFlash();
         <thead><tr><th>Pos</th><th>Constructor</th><th>Pts</th><th>Wins</th></tr></thead>
         <tbody>
         <?php foreach ($constructorStandings as $c): ?>
-        <tr class="clickable-row" data-href="<?= APP_URL ?>/admin/team_detail.php?id=<?= $c['team_id'] ?>">
+        <tr class="clickable-row" data-href="<?= APP_URL ?>/admin/teams.php?id=<?= $c['team_id'] ?>">
             <td><span class="position-badge pos-<?= $c['position'] <= 3 ? $c['position'] : 'other' ?>"><?= h((string)$c['position']) ?></span></td>
             <td>
                 <strong><?= h($c['name']) ?></strong>

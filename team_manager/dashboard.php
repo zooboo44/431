@@ -29,22 +29,44 @@ if ($team && $seasonId) {
     $stmt->execute([$teamId, $seasonId]);
     $teamSeason = $stmt->fetch();
 
-    $stmt = $db->prepare('SELECT position, points, wins FROM constructor_standings WHERE team_id = ? AND season_id = ?');
-    $stmt->execute([$teamId, $seasonId]);
+    $stmt = $db->prepare("
+        SELECT COALESCE(SUM(rr.points_scored),0) AS points,
+               SUM(CASE WHEN rr.finish_position=1 AND rr.is_sprint=0 THEN 1 ELSE 0 END) AS wins,
+               NULL AS position
+        FROM race_results rr
+        JOIN race_entries re ON re.id = rr.race_entry_id
+        JOIN races r ON r.id = re.race_id
+        JOIN team_seasons ts ON ts.id = re.team_season_id
+        WHERE r.season_id = ? AND r.status = 'completed' AND ts.team_id = ?
+    ");
+    $stmt->execute([$seasonId, $teamId]);
     $constructorStanding = $stmt->fetch();
 
     // Team's drivers and their standings
     $stmt = $db->prepare("
         SELECT p.id, p.first_name, p.last_name, p.racing_number,
-               ds_stand.points, ds_stand.wins, ds_stand.position AS standing_pos
+               COALESCE((
+                   SELECT SUM(rr2.points_scored)
+                   FROM race_results rr2
+                   JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+                   JOIN races r2 ON r2.id = re2.race_id
+                   WHERE r2.season_id = ? AND r2.status='completed' AND re2.person_id = p.id
+               ),0) AS points,
+               COALESCE((
+                   SELECT SUM(CASE WHEN rr2.finish_position=1 AND rr2.is_sprint=0 THEN 1 ELSE 0 END)
+                   FROM race_results rr2
+                   JOIN race_entries re2 ON re2.id = rr2.race_entry_id
+                   JOIN races r2 ON r2.id = re2.race_id
+                   WHERE r2.season_id = ? AND r2.status='completed' AND re2.person_id = p.id
+               ),0) AS wins,
+               NULL AS standing_pos
         FROM driver_seasons drs
         JOIN people p ON p.id = drs.person_id
-        LEFT JOIN driver_standings ds_stand ON ds_stand.person_id = p.id AND ds_stand.season_id = ?
         WHERE drs.team_season_id = (SELECT id FROM team_seasons WHERE team_id = ? AND season_id = ?)
         AND drs.season_id = ?
-        ORDER BY COALESCE(ds_stand.position, 99)
+        ORDER BY points DESC
     ");
-    $stmt->execute([$seasonId, $teamId, $seasonId, $seasonId]);
+    $stmt->execute([$seasonId, $seasonId, $teamId, $seasonId, $seasonId]);
     $teamDrivers = $stmt->fetchAll();
 }
 
@@ -111,7 +133,7 @@ renderFlash();
         <?php foreach ($teamDrivers as $d): ?>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-bottom:1px solid var(--border)">
             <div>
-                <a href="<?= APP_URL ?>/team_manager/driver_profile.php?person_id=<?= $d['id'] ?>" style="font-weight:600">#<?= h((string)$d['racing_number']) ?> <?= h($d['first_name'] . ' ' . $d['last_name']) ?></a>
+                <a href="<?= APP_URL ?>/team_manager/drivers.php?person_id=<?= $d['id'] ?>" style="font-weight:600">#<?= h((string)$d['racing_number']) ?> <?= h($d['first_name'] . ' ' . $d['last_name']) ?></a>
                 <div class="text-muted" style="font-size:0.8rem">
                     <?= $d['standing_pos'] ? 'Championship P' . h((string)$d['standing_pos']) : 'No standing yet' ?>
                 </div>
