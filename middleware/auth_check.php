@@ -20,7 +20,7 @@ function checkSessionTimeout(): void {
     if (time() - $lastActivity > SESSION_TIMEOUT) {
         $userId = $_SESSION['user_id'];
         try {
-            getDB()->prepare('UPDATE users SET session_token=NULL, session_ip=NULL, session_ua=NULL, session_at=NULL WHERE id=?')
+            getDB()->prepare('UPDATE users SET session_token=NULL, session_ip=NULL, session_ua=NULL, session_expires=NULL WHERE id=?')
                    ->execute([$userId]);
         } catch (Exception $e) {}
         session_unset();

@@ -66,11 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Single session enforcement — store token in users row
                 if (in_array($user['role'], RESTRICTED_ROLES, true)) {
                     $db->prepare(
-                        'UPDATE users SET session_token=?, session_ip=?, session_ua=?, session_at=NOW() WHERE id=?'
+                        'UPDATE users SET session_token=?, session_ip=?, session_ua=?, session_expires=DATE_ADD(NOW(), INTERVAL ? SECOND) WHERE id=?'
                     )->execute([
                         $sessionId,
                         $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
                         substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500),
+                        SESSION_TIMEOUT,
                         $user['id']
                     ]);
                     logAudit($user['id'], 'session_displaced', 'users', $user['id'], 'Prior session invalidated by new login');

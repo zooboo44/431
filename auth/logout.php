@@ -11,7 +11,7 @@ $userId = $_SESSION['user_id'] ?? null;
 if ($userId) {
     logAudit($userId, 'logout', 'users', $userId);
     try {
-        getDB()->prepare('UPDATE users SET session_token=NULL, session_ip=NULL, session_ua=NULL, session_at=NULL WHERE id=?')
+        getDB()->prepare('UPDATE users SET session_token=NULL, session_ip=NULL, session_ua=NULL, session_expires=NULL WHERE id=?')
                ->execute([$userId]);
     } catch (Exception $e) {}
 }

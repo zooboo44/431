@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tokenRow) {
                     $db->prepare(
                         'UPDATE users SET password_hash=?, must_change_password=0,
                          reset_token_used_at=NOW(),
-                         session_token=NULL, session_ip=NULL, session_ua=NULL, session_at=NULL
+                         session_token=NULL, session_ip=NULL, session_ua=NULL, session_expires=NULL
                          WHERE id=?'
                     )->execute([$hash, $tokenCheck['id']]);
 
