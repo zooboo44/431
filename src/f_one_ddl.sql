@@ -143,6 +143,14 @@ INSERT INTO roles (id, display_name, internal_name) VALUES
 -- INITIAL DATA
 -- -----------------------------------------------------------------------------
 
+INSERT INTO circuits(id, name, location, length_km) VALUES
+(1, "Albert Park Circuit", "Melbourne, Australia", 5.278);
+
 -- -----------------------------------------------------------------------------
 -- INITIAL USERS
 -- -----------------------------------------------------------------------------
+
+INSERT INTO accounts (id, username, password_hash, email, user_role) VALUES
+(1, "admin", "$2y$10$1LXNy9U0YfkWdMLrhri3GeAd8OSaNFYZslbWobKmcJsn.BthbpmxS", "admin@gmail.com", 4),
+(2, "coach", "$2y$10$bl1XajeQm5Z6cIr/Lkar3eIIS.fyowhbSmmEKHp4Krr1WxQuRjWPq", "coach@gmail.com", 3),
+(3, "driver", "$2y$10$9YMhzlE9MBF0k5ZlLGJwJOyhhKd4fE47wimoHjjSgUpLqtQDcxqUK", "driver@gmail.com", 2);
