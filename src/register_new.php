@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 	    header("Location: register_form.php");
 	    exit();
 	} elseif (strlen($password) < 4 || strlen($password) > 64) {
-		$_SESSION['error'] = "Password needs to be 8-64 characters long";
+		$_SESSION['error'] = "Password needs to be 4-64 characters long";
 	    header("Location: register_form.php");
 	    exit();
 
