@@ -8,15 +8,19 @@ if (!isset($_SESSION['user_id'])) {
 	exit();
 }
 
-$success = "";
 $error = "";
 
-if ($_SERVER['REQUEST_METHOD'] === "POST") {
-	$db = new mysqli("localhost", "root", "", "FORMULA_ONE");
+if (!isset($_SESSION['db_user'], $_SESSION['db_pass'])) {
+	die("Database session not initalized.");
+}
 
-	if ($db->connect_error) {
-		die("DB connection failed");
-	}
+$db = new mysqli("localhost", $_SESSION['db_user'], $_SESSION['db_pass'], "FORMULA_ONE");
+
+if ($db->connect_error) {
+		die("Could not connect to database! Please try again later.");
+}
+
+if ($_SERVER['REQUEST_METHOD'] === "POST") {
 	$user_id = $_SESSION['user_id'];
 	
 	$current_password = $_POST['current_password'] ?? '';
@@ -24,13 +28,19 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 	$confirm_password = $_POST['confirmed_password'] ?? '';
 
 	if ($new_password !== $confirm_password) {
-		$error = "New passwords don't match.";
+		$_SESSION['error'] = "New passwords don't match.";
+		header("Location: change_password_form.php");
+	    exit();
+	} elseif (strlen($password) < 4 || strlen($password) > 64) {
+		$_SESSION['error'] = "Password needs to be 8-64 characters long";
+	    header("Location: change_password_form.php");
+	    exit();
 	} else {
 		// Get stored password
 		$query = "SELECT password_hash FROM accounts WHERE id = ?";
 		$stmt = $db->prepare($query);
 		if (!$stmt) {
-		    die("Prepare failed");
+		    $_SESSION['error'] = "Prepare failed";
 		}
 		$stmt->bind_param("i", $user_id);
 		$stmt->execute();
@@ -38,53 +48,24 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 		$user = $result->fetch_assoc();
 
 		if (!$user || !password_verify($current_password, $user['password_hash'])) {
-			$error = "Current password is incorrect";
+			$_SESSION['error'] = "Current password is incorrect";
 		} else {
 			$new_hash_password = password_hash($new_password, PASSWORD_DEFAULT);
 			$updateQuery = "UPDATE accounts SET password_hash = ? WHERE id = ?";
 			$updateStmt = $db->prepare($updateQuery);
 			if (!$updateStmt) {
-			    die("Prepare failed");
+			    $_SESSION['error'] = "Prepare failed";
 			}
 			$updateStmt->bind_param("si", $new_hash_password, $user_id);
 
 			if (!$updateStmt->execute()) {
-			    $error = "Failed to update password";
-			} else {
-			    $success = "Password successfully changed.";
+			    $_SESSION['error'] = "Failed to update password";
 			}
 			$updateStmt->close();
 		}
 		$stmt->close();
 
 	}
-	$db->close();
-
 }
-
+$db->close();
 ?>
-
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>F1 Statistics</title>
-</head>
-<body>
-	<h1 style="text-align: left;">Changing Password</h1>
-	<?php if (!empty($error)): ?>
-    	<p><?php echo $error; ?></p>
-    	<form action="change_password_form.php" method="GET">
-			<button type="submit">Try Again</button>
-		</form>
-	<?php endif; ?>
-
-	<?php if (!empty($success)): ?>
-	    <p><?php echo $success; ?></p>
-	    	<form action="member.php" method="GET">
-				<button type="submit">Go back to homepage</button>
-			</form>
-	<?php endif; ?>
-</body>
-</html>

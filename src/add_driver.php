@@ -8,11 +8,17 @@ if (!isset($_SESSION['user_id'])) {
 
 $error = "";
 
-if ($_SERVER['REQUEST_METHOD'] === "POST") {
-	$db = new mysqli("localhost", "root", "", "FORMULA_ONE");
-	if ($db->connect_error) {
+if (!isset($_SESSION['db_user'], $_SESSION['db_pass'])) {
+	die("Database session not initalized.");
+}
+
+$db = new mysqli("localhost", $_SESSION['db_user'], $_SESSION['db_pass'], "FORMULA_ONE");
+
+if ($db->connect_error) {
 		die("Could not connect to database! Please try again later.");
-	}
+}
+
+if ($_SERVER['REQUEST_METHOD'] === "POST") {
 
 	$first_name = trim($_POST['first_name'] ?? '');
 	$last_name = trim($_POST['last_name'] ?? '');
@@ -26,10 +32,14 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 		$error = "First name and last name are required.";
 	} else {
 		$query = "INSERT INTO drivers (first_name, last_name, street, city, state, country, zip) VALUES (?, ?, ?, ?, ?, ?, ?)";
-		$stmt = $db->prepare($query);
+		try {
+			$stmt = $db->prepare($query);
+		} catch (mysqli_sql_exception $e) {
+			$error = "You do not have permission to perform this action.";
+		}
 		
 		if (!$stmt) {
-			$error = "Database error: " . $db->error;
+			$error = "Database error: You dont premission to preform this action";
 		} else {
 			// Convert empty strings to null for optional fields to avoid regex constraint failures on empty strings if applicable
 			$p_street = $street === "" ? null : $street;
@@ -44,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 				header("Location: drivers.php");
 				exit();
 			} else {
-				$error = "Failed to add driver: " . $stmt->error;
+				$error = "Failed to add driver: You dont have permission for this action" . $stmt->error;
 			}
 			$stmt->close();
 		}

@@ -6,10 +6,18 @@ if (!isset($_SESSION['user_id'])) {
 	exit();
 }
 
-$db = new mysqli("localhost", "root", "", "FORMULA_ONE");
+if (!isset($_SESSION['db_user'], $_SESSION['db_pass'])) {
+	die("Database session not initalized.");
+}
+
+$db = new mysqli("localhost", $_SESSION['db_user'], $_SESSION['db_pass'], "FORMULA_ONE");
+
 if ($db->connect_error) {
 	die("Could not connect to database! Please try again later.");
 }
+
+$error = $_SESSION['error'] ?? '';
+unset($_SESSION['error']);
 
 $query = "SELECT id, first_name, last_name, street, city, state, country, zip FROM drivers ORDER BY last_name, first_name";
 $result = $db->query($query);
@@ -27,7 +35,9 @@ $result = $db->query($query);
 	<body>
 		<a href="member.php">Back to Dashboard</a>
 		<h1 style="text-align:left;">Manage Drivers</h1>
-		
+		<?php if (!empty($error)): ?>
+		    <p style="color:red;"><?php echo htmlspecialchars($error); ?></p>
+		<?php endif; ?>
 		<a href="add_driver.php"><button>Add New Driver</button></a>
 		
 		<table>

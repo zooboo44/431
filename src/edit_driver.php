@@ -8,7 +8,11 @@ if (!isset($_SESSION['user_id'])) {
 
 $error = "";
 
-$db = new mysqli("localhost", "root", "", "FORMULA_ONE");
+if (!isset($_SESSION['db_user'], $_SESSION['db_pass'])) {
+	die("Database session not initalized.");
+}
+
+$db = new mysqli("localhost", $_SESSION['db_user'], $_SESSION['db_pass'], "FORMULA_ONE");
 if ($db->connect_error) {
 	die("Could not connect to database! Please try again later.");
 }
@@ -28,10 +32,14 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 		$error = "ID, First name and last name are required.";
 	} else {
 		$query = "UPDATE drivers SET first_name=?, last_name=?, street=?, city=?, state=?, country=?, zip=? WHERE id=?";
-		$stmt = $db->prepare($query);
+		try {
+			$stmt = $db->prepare($query);
+		} catch (mysqli_sql_exception $e) {
+			$error = "You do not have permission to perform this action.";
+		}
 		
 		if (!$stmt) {
-			$error = "Database error: " . $db->error;
+			$error = "Database error: You dont have permssion to preform this action";
 		} else {
 			$p_street = $street === "" ? null : $street;
 			$p_city = $city === "" ? null : $city;
@@ -45,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 				header("Location: drivers.php");
 				exit();
 			} else {
-				$error = "Failed to update driver: " . $stmt->error;
+				$error = "Failed to update driver: You dont have permission for this action" . $stmt->error;
 			}
 			$stmt->close();
 		}
@@ -58,7 +66,11 @@ $driver = null;
 
 if (!empty($id)) {
 	$query = "SELECT * FROM drivers WHERE id = ?";
-	$stmt = $db->prepare($query);
+	try {
+		$stmt = $db->prepare($query);
+	} catch (mysqli_sql_exception $e) {
+		$error = "You do not have permission to perform this action.";
+	}
 	if ($stmt) {
 		$stmt->bind_param("i", $id);
 		$stmt->execute();
@@ -69,7 +81,7 @@ if (!empty($id)) {
 }
 
 if (!$driver && empty($error)) {
-	die("Driver not found.");
+	$error = "Driver not found.";
 }
 
 $db->close();

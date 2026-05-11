@@ -18,6 +18,14 @@ if (!isset($_SESSION['user_id'])) {
 <body>
 	<button onclick="history.back()">Go Back</button>
 	<h1 style="text-align: left;">Changing Password</h1>
+	<?php
+	session_start();
+
+	if (!empty($_SESSION['error'])) {
+		echo '<p style="color:red;">' . htmlspecialchars($_SESSION['error']) . '</p>';
+		unset($_SESSION['error']);
+	}
+	?>
 	<form action="change_password.php" method="POST">
 		<label>Enter current password:</label>
 		<br>

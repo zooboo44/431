@@ -54,6 +54,7 @@ CREATE TABLE driver_statistics(
     pit_stops INT UNSIGNED NOT NULL,
     laps INT UNSIGNED NOT NULL,
     best_lap_time_ms INT UNSIGNED NOT NULL,
+    position INT UNSIGNED NOT NULL,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
@@ -108,6 +109,7 @@ GRANT SELECT ON FORMULA_ONE.* TO 'coach'@'localhost';
 GRANT INSERT, UPDATE (first_name, last_name, street, city, state, country, zip) ON FORMULA_ONE.drivers TO 'coach'@'localhost';
 GRANT DELETE ON FORMULA_ONE.drivers TO 'coach'@'localhost';
 GRANT UPDATE ON FORMULA_ONE.driver_statistics TO 'coach'@'localhost';
+GRANT UPDATE (username, password_hash, email) ON accounts TO 'coach'@'localhost';
 
 -- Driver: Read access to entire database, but may only edit their own address and statistics
 DROP USER IF EXISTS 'driver'@'localhost';
@@ -116,11 +118,13 @@ GRANT SELECT ON FORMULA_ONE.* TO 'driver'@'localhost';
 GRANT INSERT, UPDATE (first_name, last_name, street, city, state, country, zip) ON FORMULA_ONE.drivers TO 'driver'@'localhost';
 GRANT DELETE ON FORMULA_ONE.drivers TO 'driver'@'localhost';
 GRANT UPDATE (pit_stops, laps, best_lap_time_ms) ON FORMULA_ONE.driver_statistics TO 'driver'@'localhost';
+GRANT UPDATE (username, password_hash, email) ON accounts TO 'driver'@'localhost';
 
 -- Visitor: Read access to the entire database, but cannot edit anything
 DROP USER IF EXISTS 'visitor'@'localhost';
 CREATE USER 'visitor'@'localhost' IDENTIFIED BY 'visitor_secret';
 GRANT SELECT ON FORMULA_ONE.* TO 'visitor'@'localhost';
+GRANT UPDATE (username, password_hash, email) ON accounts TO 'visitor'@'localhost';
 
 -- Observer: Only has access to roles and accounts
 DROP USER IF EXISTS 'observer'@'localhost';
@@ -144,7 +148,20 @@ INSERT INTO roles (id, display_name, internal_name) VALUES
 -- -----------------------------------------------------------------------------
 
 INSERT INTO circuits(id, name, location, length_km) VALUES
-(1, "Albert Park Circuit", "Melbourne, Australia", 5.278);
+(1, "Albert Park Circuit", "Melbourne, Australia", 5.278),
+(2, "Circuit de Spa-Francorchamps", "Stavelot, Belgium", 7.004),
+(3, "Autodromo Nazionale Monza", "Monza, Italy", 5.793),
+(4, "Circuit de Monaco", "Monte Carlo, Monaco", 3.337),
+(5, "Silverstone Circuit", "Silverstone, UK", 5.891),
+(6, "Circuit Gilles Villeneuve", "Montreal, Canada", 4.361),
+(7, "Suzuka International Racing Course", "Suzuka, Japan", 5.807),
+(8, "Brands Hatch GP Circuit", "West Kingsdown, UK", 4.206);
+
+INSERT INTO drivers(id, first_name, last_name, street, city, state, country, zip) VALUES
+(1, "Michael", "Schumacher", NULL, "Hurth", "North Rhine-Westphalia", "Germany", NULL),
+(2, "George", "Russell", NULL, "King's Lynn", "Norfolk", "England", NULL),
+(3, "Lando", "Norris", NULL, NULL, "Bristol", "England", NULL),
+(4, "Max", "Verstappen", NULL, "Hasselt", "Limburg", "Belgium", NULL);
 
 -- -----------------------------------------------------------------------------
 -- INITIAL USERS

@@ -8,9 +8,14 @@ if (!isset($_SESSION['user_id'])) {
 
 $error = "";
 
-$db = new mysqli("localhost", "root", "", "FORMULA_ONE");
+if (!isset($_SESSION['db_user'], $_SESSION['db_pass'])) {
+	die("Database session not initalized.");
+}
+
+$db = new mysqli("localhost", $_SESSION['db_user'], $_SESSION['db_pass'], "FORMULA_ONE");
+
 if ($db->connect_error) {
-	die("Could not connect to database! Please try again later.");
+		die("Could not connect to database! Please try again later.");
 }
 
 // Check if we're submitting the form
@@ -19,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 	$id = $_POST['id'] ?? '';
 	$driver_id = trim($_POST['driver_id'] ?? '');
 	$circuit_id = trim($_POST['circuit_id'] ?? '');
+	$position = trim($_POST['position'] ?? '');
 	$pit_stops = trim($_POST['pit_stops'] ?? '');
 	$laps = trim($_POST['laps'] ?? '');
 	$best_lap_time_ms = trim($_POST['best_lap_time_ms'] ?? '');
@@ -26,19 +32,23 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 	if (empty($driver_id) || empty($circuit_id)) {
 		$error = "Driver and circuit Id are required.";
 	} else {
-		$query = "UPDATE driver_statistics SET driver_id=?, circuit_id=?, pit_stops=?, laps=?, best_lap_time_ms=? WHERE id=?";
-		$stmt = $db->prepare($query);
-		
+		$query = "UPDATE driver_statistics SET driver_id=?, circuit_id=?, position=?, pit_stops=?, laps=?, best_lap_time_ms=? WHERE id=?";
+		try {
+			$stmt = $db->prepare($query);
+		} catch (mysqli_sql_exception $e) {
+			$error = "You do not have permission to perform this action.";
+		}
+	
 		if (!$stmt) {
-			$error = "Database error: " . $db->error;
+			$error = "Database error: You do not have permission to perform this action";
 		} else {
-			$stmt->bind_param("iiiiii", $driver_id, $circuit_id, $pit_stops, $laps, $best_lap_time_ms, $id);
+			$stmt->bind_param("iiiiiii", $driver_id, $circuit_id, $position, $pit_stops, $laps, $best_lap_time_ms, $id);
 			
 			if ($stmt->execute()) {
 				header("Location: statistic.php");
 				exit();
 			} else {
-				$error = "Failed to update statistic: " . $stmt->error;
+				$error = "Failed to update statistic: You dont have permission for this action" . $stmt->error;
 			}
 			$stmt->close();
 		}
@@ -62,10 +72,8 @@ if (!empty($id)) {
 }
 
 if (!$stat && empty($error)) {
-	die("Statistic not found.");
+	$error = "Statistic not found.";
 }
-
-$db->close();
 ?>
 <!DOCTYPE html>
 <html>
@@ -87,12 +95,49 @@ $db->close();
 		<form action="edit_driver_stat.php" method="POST">
 			<input type="hidden" name="id" value="<?php echo htmlspecialchars($stat['id'] ?? $_POST['id']); ?>">
 			<div class="form-group">
-				<label>Driver ID:</label>
-				<input type="text" name="driver_id" value="<?php echo htmlspecialchars($stat['driver_id'] ?? $_POST['driver_id'] ?? ''); ?>">
+				<label>Driver:</label>
+				<select name="driver_id" required>
+					<option value="" selected disabled>
+						Choose Driver
+					</option>
+					<?php
+					$driverQuery = "SELECT id, first_name, last_name FROM drivers ORDER BY last_name, first_name";
+					$driverStmt = $db->prepare($driverQuery);
+					$driverStmt->execute();
+					$driverStmt->bind_result($driver_id, $firstName, $lastName);
+
+					while ($driverStmt->fetch()) {
+						$selected = ($driver_id == ($stat['driver_id'] ?? '')) ? "selected" : "";
+						echo '<option value="' . htmlspecialchars($driver_id) . '" ' . $selected . '>' . htmlspecialchars($lastName . ', ' . $firstName) . '</option>';
+					}
+					$driverStmt->close();
+					?>
+				</select>
 			</div>
 			<div class="form-group">
-				<label>Circuit ID:</label>
-				<input type="text" name="circuit_id" value="<?php echo htmlspecialchars($stat['circuit_id'] ?? $_POST['circuit_id'] ?? ''); ?>">
+				<label>Circuit:</label>
+				<select name="circuit_id" required>
+					<option value="" selected disabled>
+						Choose Circuit
+					</option>
+					<?php
+					$circuitQuery = "SELECT id, name FROM circuits ORDER BY name";
+					$circuitStmt = $db->prepare($circuitQuery);
+					$circuitStmt->execute();
+					$circuitStmt->bind_result($circuit_id, $circuitName);
+
+					while ($circuitStmt->fetch()) {
+						$selected = ($circuit_id == ($stat['circuit_id'] ?? '')) ? "selected" : "";
+						echo '<option value="' . htmlspecialchars($circuit_id) . '" ' . $selected . '>' . htmlspecialchars($circuitName) . '</option>';
+					}
+					$circuitStmt->close();
+					$db->close();
+					?>
+				</select>
+			</div>
+			<div class="form-group">
+				<label>Position:</label>
+				<input type="text" name="position" value="<?php echo htmlspecialchars($stat['position'] ?? $_POST['position'] ?? ''); ?>">
 			</div>
 			<div class="form-group">
 				<label>Pit Stops:</label>

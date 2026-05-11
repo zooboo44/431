@@ -5,6 +5,9 @@ if (!isset($_SESSION['user_id'])) {
 	exit();
 }
 
+$error = $_SESSION['error'] ?? '';
+unset($_SESSION['error']);
+
 ?>
 
 <!DOCTYPE html>
@@ -17,7 +20,9 @@ if (!isset($_SESSION['user_id'])) {
 <body>
 	<a href="member.php">Back to Dashboard</a>
 	<h1 style="text-align:left;">Change Role</h1>
-
+	<?php if (!empty($error)): ?>
+		<p style="color:red;"><?php echo htmlspecialchars($error); ?></p>
+	<?php endif; ?>
 	<form action="change_role.php" method="POST">
 		<label>Enter Email:</label>
 		<br>

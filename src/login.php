@@ -3,6 +3,8 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+require_once "config.php";
+
 session_start();
 $error = "";
 if ($_SERVER['REQUEST_METHOD'] === "POST" &&
@@ -16,14 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] === "POST" &&
 	$username = $_POST['username'] ?? '';
 	$password = $_POST['password'] ?? '';
 	if (empty($username) || empty($password)) {
-		$error = "";
+		$error = "Username and password required";
 	}
 
-	$query = "SELECT accounts.id, accounts.username, accounts.password_hash FROM accounts WHERE username = ?";
+	$query = "SELECT accounts.id, accounts.username, accounts.password_hash, accounts.user_role FROM accounts WHERE username = ?";
 	$stmt = $db->prepare($query);
 
 	if (!$stmt) {
-	    die("Query failed");
+	    $error = "Query failed";
 	}
 	$stmt->bind_param("s", $username);
 	$stmt->execute();
@@ -35,6 +37,32 @@ if ($_SERVER['REQUEST_METHOD'] === "POST" &&
 
 			$_SESSION['user_id'] = $user['id'];
 			$_SESSION['username'] = $user['username'];
+
+			switch ($user['user_role']) {
+				case 4:
+					$_SESSION['db_user'] = access_admin;
+					$_SESSION['db_pass'] = admin_pass;
+					break;
+				case 3:
+					$_SESSION['db_user'] = access_coach;
+					$_SESSION['db_pass'] = coach_pass;
+					break;
+				case 2:
+					$_SESSION['db_user'] = access_driver;
+					$_SESSION['db_pass'] = driver_pass;
+					break;
+				case 1:
+					$_SESSION['db_user'] = access_visitor;
+					$_SESSION['db_pass'] = visitor_pass;
+					break;
+				case 0:
+					$_SESSION['db_user'] = access_observer;
+					$_SESSION['db_pass'] = observer_pass;
+					break;
+				default:
+					$error = "Invalid role";
+			}
+
 			header("Location: member.php");
 			exit();
 		} else {

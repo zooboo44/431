@@ -10,6 +10,14 @@
 		<button type="submit">Go back</button>
 		</form>
 		<h1 style="text-align:left;">Registering new account</h1>
+		<?php
+		session_start();
+
+		if (!empty($_SESSION['error'])) {
+		    echo '<p style="color:red;">' . htmlspecialchars($_SESSION['error']) . '</p>';
+		    unset($_SESSION['error']);
+		}
+		?>
 		<form action="register_new.php" method="POST">
 			<label>Enter Email: </label>
 			<br>
