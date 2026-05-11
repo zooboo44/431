@@ -1,7 +1,11 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL & ~E_DEPRECATED);
 require_once __DIR__ . '/functions/db_fns.php';
 require_once __DIR__ . '/functions/data_valid_fns.php';
 require_once __DIR__ . '/functions/output_fns.php';
+require_once "config.php";
+require_once "Mail.php";
 
 $reset_link = "";
 
@@ -19,30 +23,48 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
             $stmt->close();
 
             if ($account) {
-                $account_id = (int) $account['id'];
-                $token = bin2hex(random_bytes(32));
-                $token_hash = hash('sha256', $token);
+                $newPassword = bin2hex(random_bytes(6));
+                $newPassword = '@' . strtoupper($newPassword[0]) . $newPassword;
+                $password_hash = password_hash($newPassword, PASSWORD_DEFAULT);
 
-                $expire_old = $db->prepare("UPDATE password_resets SET used_at = NOW() WHERE account_id = ? AND used_at IS NULL");
-                if ($expire_old) {
-                    $expire_old->bind_param("i", $account_id);
-                    $expire_old->execute();
-                    $expire_old->close();
-                }
+                $updateQuery = "UPDATE accounts SET password_hash = ? WHERE email = ?";
+                $update = $db->prepare($updateQuery);
+                if ($update) {
+                    $update->bind_param("ss", $password_hash, $email);
+                    if ($update->execute()) {
+                        $from = User_name;
+                        $to = $email;
 
-                $insert = $db->prepare("INSERT INTO password_resets (account_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))");
-                if ($insert) {
-                    $insert->bind_param("is", $account_id, $token_hash);
-                    $created = $insert->execute();
-                    $insert->close();
+                        $host = "ssl://smtp.gmail.com";
+                        $port = "465";
+                        $username = User_name;
+                        $password = Pass_word;
 
-                    if ($created) {
-                        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                        $path = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
-                        $reset_link = $scheme . '://' . $host . $path . '/reset_password.php?token=' . urlencode($token);
+                        $subject = "Your new password";
+                        $message = "Your password has been reset. \n\n Your new password is $newPassword";
+                        $headers = array (
+                            'From' => "F1 Statistics Team <$from>",
+                            'To' => $to,
+                            'Subject' => $subject
+                        );
+
+                        $smtp = Mail::factory('smtp', array (
+                            'host' => $host,
+                            'port' => $port,
+                            'auth' => true,
+                            'username' => $username,
+                            'password' => $password
+                        ));
+
+                        $mail = $smtp->send($to, $headers, $message);
+
+                        if (PEAR::isError($mail)) {
+                            die($mail->getMessage());
+                        }
+
                     }
                 }
+                $update->close();
             }
         }
 
@@ -57,13 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
     </head>
     <body>
         <h1>Password Reset</h1>
-        <p>If an account exists, a reset link has been created.</p>
-
-        <?php if (!empty($reset_link)): ?>
-            <p><strong>Local testing only:</strong> Email is not configured. Use this reset link:</p>
-            <p><a href="<?php echo e($reset_link); ?>"><?php echo e($reset_link); ?></a></p>
-        <?php endif; ?>
-
+        <p>If an account exists, a new password has been created.</p>
         <form action="login.php" method="GET">
             <button type="submit">Go back to Login</button>
         </form>

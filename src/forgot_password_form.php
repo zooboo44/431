@@ -10,13 +10,13 @@
 
         <h1 style="text-align:left;">Forgot Password</h1>
         <form action="forgot_password.php" method="POST">
-            <p>Enter your email address to create a password reset link.</p>
+            <p>Enter your email address to get a new password</p>
 
             <label>Email: </label>
             <br>
             <input type="email" name="email" required>
             <br><br>
-            <button type="submit">Create reset link</button>
+            <button type="submit">Create temporary password</button>
         </form>
     </body>
 </html>

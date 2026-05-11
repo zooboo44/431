@@ -9,4 +9,7 @@ define('DB_PASS', 'root');
 
 define('DEFAULT_ROLE_ID', 4);
 
+// Insert email & App password
+define('User_name', 'test@gmail.com');
+define('Pass_word', 'xxxx xxxx xxxx xxxx');
 ?>
