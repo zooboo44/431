@@ -1,22 +1,15 @@
 <?php
 session_start();
-session_unset();
+
+$_SESSION = [];
+
+if (ini_get("session.use_cookies")) {
+    $params = session_get_cookie_params();
+    setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+}
+
 session_destroy();
 
-//setcookie(session_name(), '', time() - 42000, '/');
+header("Location: login.php");
+exit();
 ?>
-
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>F1 Statistics</title>
-</head>
-<body>
-	<h1 style="text-align: center;">Logged out</h1>
-	<form action="login.php" method="GET">
-  	  <button type="submit">Return to login</button>
-	</form>
-</body>
-</html>

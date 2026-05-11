@@ -1,1 +1,8 @@
-<?php echo "Unfinished page!" ?>
+<?php
+
+function redirect_to($path) {
+    header("Location: " . $path);
+    exit();
+}
+
+?>

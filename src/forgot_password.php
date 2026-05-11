@@ -1,95 +1,71 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL & ~E_DEPRECATED);
+require_once __DIR__ . '/functions/db_fns.php';
+require_once __DIR__ . '/functions/data_valid_fns.php';
+require_once __DIR__ . '/functions/output_fns.php';
 
-require_once "Mail.php";
-require_once "config.php";
+$reset_link = "";
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $db = new mysqli("localhost", "root", "", "FORMULA_ONE");
+if ($_SERVER['REQUEST_METHOD'] === "POST") {
+    $email = trim($_POST['email'] ?? '');
 
-  if ($db->connect_error) {
-    die("Database connection failed");
-  }
-  $email = $_POST['email'] ?? '';
+    if (is_valid_email($email)) {
+        $db = db_connect();
 
-  // Check if email exists
-  $query = "SELECT id FROM accounts where email = ?";
-  $stmt = $db->prepare($query);
-  if (!$stmt) {
-    die("Prepare failed: " . $db->error);
-  }
-  $stmt->bind_param("s", $email);
-  $stmt->execute();
-  $result = $stmt->get_result();
+        $stmt = $db->prepare("SELECT id FROM accounts WHERE email = ? AND is_active = 1 LIMIT 1");
+        if ($stmt) {
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $account = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
 
-  if ($result->num_rows === 0) {
-    die("No account found.");
-  }
+            if ($account) {
+                $account_id = (int) $account['id'];
+                $token = bin2hex(random_bytes(32));
+                $token_hash = hash('sha256', $token);
 
-  $newPassword = bin2hex(random_bytes(4));
-  $password_hash = password_hash($newPassword, PASSWORD_DEFAULT);
+                $expire_old = $db->prepare("UPDATE password_resets SET used_at = NOW() WHERE account_id = ? AND used_at IS NULL");
+                if ($expire_old) {
+                    $expire_old->bind_param("i", $account_id);
+                    $expire_old->execute();
+                    $expire_old->close();
+                }
 
-  $update = "UPDATE accounts SET password_hash = ? WHERE email = ?";
-  $updatedStmt = $db->prepare($update);
-  if (!$updatedStmt) {
-    die("Prepare failed");
-  }
-  $updatedStmt->bind_param("ss", $password_hash, $email);
+                $insert = $db->prepare("INSERT INTO password_resets (account_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))");
+                if ($insert) {
+                    $insert->bind_param("is", $account_id, $token_hash);
+                    $created = $insert->execute();
+                    $insert->close();
 
-  if (!$updatedStmt->execute()) {
-    die("Update failed");
-  }
+                    if ($created) {
+                        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                        $path = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
+                        $reset_link = $scheme . '://' . $host . $path . '/reset_password.php?token=' . urlencode($token);
+                    }
+                }
+            }
+        }
 
-  // Email setup
-  $from = User_name;
-  $to = $email;
-
-  $host = "ssl://smtp.gmail.com";
-  $port = "465";
-  $username = User_name;
-  $password = Pass_word;
-
-  $subject = "Your new password for F1 Statistics";
-  $message = "Your password has been reset. \n\n Your new password is $newPassword";
-  $headers = array (
-    'From' => "FORMULA_ONE1 Statistics <$from>",
-    'To' => $to,
-    'Subject' => $subject
-  
-  );
-
-  $smtp = Mail::factory('smtp', array(
-    'host' => $host,
-    'port' => $port,
-    'auth' => true,
-    'username' => $username,
-    'password' => $password
-  ));
-
-  $mail = $smtp->send($to, $headers, $message);
-
-  if (PEAR::isError($mail)) {
-    die($mail->getMessage());
-  }
-
-  $stmt->close();
-  $updatedStmt->close();
-  $db->close();
+        $db->close();
+    }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>F1 Statistics - Feedback Submitted</title>
-  </head>
-  <body>
-    <h1>Change password Request submitted</h1>
-    <p>Your new generated password has been sent.</p>
+    <head>
+        <title>F1 Statistics - Password Reset</title>
+    </head>
+    <body>
+        <h1>Password Reset</h1>
+        <p>If an account exists, a reset link has been created.</p>
 
-    <form action="login.php" method="GET">
-      <button type="submit">Go back to Login</button>
-    </form>
-  </body>
+        <?php if (!empty($reset_link)): ?>
+            <p><strong>Local testing only:</strong> Email is not configured. Use this reset link:</p>
+            <p><a href="<?php echo e($reset_link); ?>"><?php echo e($reset_link); ?></a></p>
+        <?php endif; ?>
+
+        <form action="login.php" method="GET">
+            <button type="submit">Go back to Login</button>
+        </form>
+    </body>
 </html>
