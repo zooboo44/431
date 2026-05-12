@@ -20,17 +20,17 @@ unset($_SESSION['register_error'], $_SESSION['register_form']);
         <h1 style="text-align:left;">Registering new account</h1>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <form action="register_new.php" method="POST">
             <label>Enter Email: </label>
             <br>
-            <input type="email" name="email" value="<?php echo e($form['email'] ?? ''); ?>" required>
+            <input type="email" name="email" value="<?php echo encode_var($form['email'] ?? ''); ?>" required>
             <br>
             <label>Create username: </label>
             <br>
-            <input type="text" name="username" value="<?php echo e($form['username'] ?? ''); ?>" required>
+            <input type="text" name="username" value="<?php echo encode_var($form['username'] ?? ''); ?>" required>
             <br>
             <label>Create password: </label>
             <br>

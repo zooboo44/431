@@ -127,32 +127,32 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
         <h1><?php echo $circuit_id > 0 ? 'Edit Circuit' : 'Add Circuit'; ?></h1>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <form action="circuit_edit.php" method="POST">
             <?php if ($circuit_id > 0): ?>
-                <input type="hidden" name="id" value="<?php echo e($circuit_id); ?>">
+                <input type="hidden" name="id" value="<?php echo encode_var($circuit_id); ?>">
             <?php endif; ?>
 
             <div class="form-group">
                 <label>Circuit name:</label>
-                <input type="text" name="circuit_name" value="<?php echo e($circuit['circuit_name']); ?>" required>
+                <input type="text" name="circuit_name" value="<?php echo encode_var($circuit['circuit_name']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Location:</label>
-                <input type="text" name="location" value="<?php echo e($circuit['location']); ?>" required>
+                <input type="text" name="location" value="<?php echo encode_var($circuit['location']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Country:</label>
-                <input type="text" name="country" value="<?php echo e($circuit['country']); ?>" required>
+                <input type="text" name="country" value="<?php echo encode_var($circuit['country']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Length KM:</label>
-                <input type="number" name="length_km" min="0.001" max="30" step="0.001" value="<?php echo e($circuit['length_km']); ?>" required>
+                <input type="number" name="length_km" min="0.001" max="30" step="0.001" value="<?php echo encode_var($circuit['length_km']); ?>" required>
             </div>
 
             <button type="submit">Save Circuit</button>

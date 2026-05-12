@@ -85,11 +85,11 @@ $result = $db->query("SELECT id, circuit_name, location, country, length_km
         <h1>Circuits</h1>
 
         <?php if (!empty($message)): ?>
-            <p style="color:green;"><?php echo e($message); ?></p>
+            <p style="color:green;"><?php echo encode_var($message); ?></p>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <?php if ($can_manage): ?>
@@ -112,15 +112,15 @@ $result = $db->query("SELECT id, circuit_name, location, country, length_km
                 <?php if ($result && $result->num_rows > 0): ?>
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
-                            <td><?php echo e($row['circuit_name']); ?></td>
-                            <td><?php echo e($row['location']); ?></td>
-                            <td><?php echo e($row['country']); ?></td>
-                            <td><?php echo e($row['length_km']); ?></td>
+                            <td><?php echo encode_var($row['circuit_name']); ?></td>
+                            <td><?php echo encode_var($row['location']); ?></td>
+                            <td><?php echo encode_var($row['country']); ?></td>
+                            <td><?php echo encode_var($row['length_km']); ?></td>
                             <?php if ($can_manage): ?>
                                 <td>
-                                    <a href="circuit_edit.php?id=<?php echo e($row['id']); ?>">Edit</a>
+                                    <a href="circuit_edit.php?id=<?php echo encode_var($row['id']); ?>">Edit</a>
                                     <form action="circuits.php" method="POST" style="display:inline;" onsubmit="return confirm('Delete this circuit?');">
-                                        <input type="hidden" name="circuit_id" value="<?php echo e($row['id']); ?>">
+                                        <input type="hidden" name="circuit_id" value="<?php echo encode_var($row['id']); ?>">
                                         <button type="submit">Delete</button>
                                     </form>
                                 </td>

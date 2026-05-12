@@ -162,17 +162,17 @@ $circuits = $db->query("SELECT id, circuit_name, location, country FROM circuits
         <h1><?php echo $race_id > 0 ? 'Edit Race' : 'Add Race'; ?></h1>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <form action="race_edit.php" method="POST">
             <?php if ($race_id > 0): ?>
-                <input type="hidden" name="id" value="<?php echo e($race_id); ?>">
+                <input type="hidden" name="id" value="<?php echo encode_var($race_id); ?>">
             <?php endif; ?>
 
             <div class="form-group">
                 <label>Race name:</label>
-                <input type="text" name="race_name" value="<?php echo e($race['race_name']); ?>" required>
+                <input type="text" name="race_name" value="<?php echo encode_var($race['race_name']); ?>" required>
             </div>
 
             <div class="form-group">
@@ -180,8 +180,8 @@ $circuits = $db->query("SELECT id, circuit_name, location, country FROM circuits
                 <select name="circuit_id" required>
                     <option value="">Select circuit</option>
                     <?php while ($circuit = $circuits->fetch_assoc()): ?>
-                        <option value="<?php echo e($circuit['id']); ?>" <?php echo (int) $race['circuit_id'] === (int) $circuit['id'] ? 'selected' : ''; ?>>
-                            <?php echo e($circuit['circuit_name'] . ' - ' . $circuit['location'] . ', ' . $circuit['country']); ?>
+                        <option value="<?php echo encode_var($circuit['id']); ?>" <?php echo (int) $race['circuit_id'] === (int) $circuit['id'] ? 'selected' : ''; ?>>
+                            <?php echo encode_var($circuit['circuit_name'] . ' - ' . $circuit['location'] . ', ' . $circuit['country']); ?>
                         </option>
                     <?php endwhile; ?>
                 </select>
@@ -189,12 +189,12 @@ $circuits = $db->query("SELECT id, circuit_name, location, country FROM circuits
 
             <div class="form-group">
                 <label>Race date:</label>
-                <input type="date" name="race_date" value="<?php echo e($race['race_date']); ?>" required>
+                <input type="date" name="race_date" value="<?php echo encode_var($race['race_date']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Scheduled laps:</label>
-                <input type="number" name="scheduled_laps" min="1" max="200" value="<?php echo e($race['scheduled_laps']); ?>" required>
+                <input type="number" name="scheduled_laps" min="1" max="200" value="<?php echo encode_var($race['scheduled_laps']); ?>" required>
             </div>
 
             <button type="submit">Save Race</button>

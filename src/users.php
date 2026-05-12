@@ -110,11 +110,11 @@ $result = $db->query($query);
         <h1>Manage Users</h1>
 
         <?php if (!empty($message)): ?>
-            <p style="color:green;"><?php echo e($message); ?></p>
+            <p style="color:green;"><?php echo encode_var($message); ?></p>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <table>
@@ -134,19 +134,19 @@ $result = $db->query($query);
                 <?php if ($result && $result->num_rows > 0): ?>
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
-                            <td><?php echo e($row['id']); ?></td>
-                            <td><?php echo e($row['email']); ?></td>
-                            <td><?php echo e($row['username']); ?></td>
-                            <td><?php echo e($row['role_name']); ?></td>
-                            <td><?php echo e($row['team_name'] ?? ''); ?></td>
-                            <td><?php echo e(trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''))); ?></td>
+                            <td><?php echo encode_var($row['id']); ?></td>
+                            <td><?php echo encode_var($row['email']); ?></td>
+                            <td><?php echo encode_var($row['username']); ?></td>
+                            <td><?php echo encode_var($row['role_name']); ?></td>
+                            <td><?php echo encode_var($row['team_name'] ?? ''); ?></td>
+                            <td><?php echo encode_var(trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''))); ?></td>
                             <td><?php echo (int) $row['is_active'] === 1 ? 'Active' : 'Disabled'; ?></td>
                             <td>
-                                <a href="user_edit.php?id=<?php echo e($row['id']); ?>">Edit</a>
+                                <a href="user_edit.php?id=<?php echo encode_var($row['id']); ?>">Edit</a>
 
                                 <?php if ((int) $row['id'] !== current_user_id()): ?>
                                     <form action="users.php" method="POST" style="display:inline;">
-                                        <input type="hidden" name="account_id" value="<?php echo e($row['id']); ?>">
+                                        <input type="hidden" name="account_id" value="<?php echo encode_var($row['id']); ?>">
                                         <input type="hidden" name="is_active" value="<?php echo (int) $row['is_active'] === 1 ? 0 : 1; ?>">
                                         <button type="submit"><?php echo (int) $row['is_active'] === 1 ? 'Disable' : 'Enable'; ?></button>
                                     </form>

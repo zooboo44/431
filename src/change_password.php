@@ -77,14 +77,14 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
         <h1 style="text-align: left;">Change Password</h1>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
             <form action="change_password_form.php" method="GET">
                 <button type="submit">Try Again</button>
             </form>
         <?php endif; ?>
 
         <?php if (!empty($success)): ?>
-            <p style="color:green;"><?php echo e($success); ?></p>
+            <p style="color:green;"><?php echo encode_var($success); ?></p>
             <form action="member.php" method="GET">
                 <button type="submit">Go back to homepage</button>
             </form>

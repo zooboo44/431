@@ -86,11 +86,11 @@ $result = $db->query("SELECT id, team_name, base_location, principal_name, engin
         <h1>Teams</h1>
 
         <?php if (!empty($message)): ?>
-            <p style="color:green;"><?php echo e($message); ?></p>
+            <p style="color:green;"><?php echo encode_var($message); ?></p>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <?php if ($can_manage): ?>
@@ -114,17 +114,17 @@ $result = $db->query("SELECT id, team_name, base_location, principal_name, engin
                 <?php if ($result && $result->num_rows > 0): ?>
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
-                            <td><?php echo e($row['id']); ?></td>
-                            <td><?php echo e($row['team_name']); ?></td>
-                            <td><?php echo e($row['base_location']); ?></td>
-                            <td><?php echo e($row['principal_name']); ?></td>
-                            <td><?php echo e($row['engine_supplier']); ?></td>
+                            <td><?php echo encode_var($row['id']); ?></td>
+                            <td><?php echo encode_var($row['team_name']); ?></td>
+                            <td><?php echo encode_var($row['base_location']); ?></td>
+                            <td><?php echo encode_var($row['principal_name']); ?></td>
+                            <td><?php echo encode_var($row['engine_supplier']); ?></td>
                             <?php if ($can_manage || ($can_edit_own_team && (int) $row['id'] === current_team_id())): ?>
                                 <td>
-                                    <a href="team_edit.php?id=<?php echo e($row['id']); ?>">Edit</a>
+                                    <a href="team_edit.php?id=<?php echo encode_var($row['id']); ?>">Edit</a>
                                     <?php if ($can_manage): ?>
                                         <form action="teams.php" method="POST" style="display:inline;" onsubmit="return confirm('Delete this team?');">
-                                            <input type="hidden" name="team_id" value="<?php echo e($row['id']); ?>">
+                                            <input type="hidden" name="team_id" value="<?php echo encode_var($row['id']); ?>">
                                             <button type="submit">Delete</button>
                                         </form>
                                     <?php endif; ?>

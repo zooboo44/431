@@ -147,36 +147,36 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
         <h1><?php echo $team_id > 0 ? 'Edit Team' : 'Add Team'; ?></h1>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <form action="team_edit.php" method="POST">
             <?php if ($team_id > 0): ?>
-                <input type="hidden" name="id" value="<?php echo e($team_id); ?>">
+                <input type="hidden" name="id" value="<?php echo encode_var($team_id); ?>">
             <?php endif; ?>
 
             <div class="form-group">
                 <label>Team name:</label>
                 <?php if ($is_director): ?>
-                    <input type="text" name="team_name" value="<?php echo e($team['team_name']); ?>" required>
+                    <input type="text" name="team_name" value="<?php echo encode_var($team['team_name']); ?>" required>
                 <?php else: ?>
-                    <?php echo e($team['team_name']); ?>
+                    <?php echo encode_var($team['team_name']); ?>
                 <?php endif; ?>
             </div>
 
             <div class="form-group">
                 <label>Base location:</label>
-                <input type="text" name="base_location" value="<?php echo e($team['base_location']); ?>">
+                <input type="text" name="base_location" value="<?php echo encode_var($team['base_location']); ?>">
             </div>
 
             <div class="form-group">
                 <label>Principal:</label>
-                <input type="text" name="principal_name" value="<?php echo e($team['principal_name']); ?>">
+                <input type="text" name="principal_name" value="<?php echo encode_var($team['principal_name']); ?>">
             </div>
 
             <div class="form-group">
                 <label>Engine supplier:</label>
-                <input type="text" name="engine_supplier" value="<?php echo e($team['engine_supplier']); ?>">
+                <input type="text" name="engine_supplier" value="<?php echo encode_var($team['engine_supplier']); ?>">
             </div>
 
             <button type="submit">Save Team</button>

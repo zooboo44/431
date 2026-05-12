@@ -217,22 +217,22 @@ $can_edit_racing_number = is_league_director() || is_team_manager();
         <h1><?php echo $is_edit ? 'Edit Driver' : 'Add Driver'; ?></h1>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <form action="driver_edit.php" method="POST">
             <?php if ($is_edit): ?>
-                <input type="hidden" name="id" value="<?php echo e($driver_id); ?>">
+                <input type="hidden" name="id" value="<?php echo encode_var($driver_id); ?>">
             <?php endif; ?>
 
             <div class="form-group">
                 <label>First name:</label>
-                <input type="text" name="first_name" value="<?php echo e($driver['first_name']); ?>" required>
+                <input type="text" name="first_name" value="<?php echo encode_var($driver['first_name']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Last name:</label>
-                <input type="text" name="last_name" value="<?php echo e($driver['last_name']); ?>" required>
+                <input type="text" name="last_name" value="<?php echo encode_var($driver['last_name']); ?>" required>
             </div>
 
             <div class="form-group">
@@ -241,61 +241,61 @@ $can_edit_racing_number = is_league_director() || is_team_manager();
                     <select name="team_id" required>
                         <option value="">Select team</option>
                         <?php while ($team = $teams->fetch_assoc()): ?>
-                            <option value="<?php echo e($team['id']); ?>" <?php echo (int) $driver['team_id'] === (int) $team['id'] ? 'selected' : ''; ?>>
-                                <?php echo e($team['team_name']); ?>
+                            <option value="<?php echo encode_var($team['id']); ?>" <?php echo (int) $driver['team_id'] === (int) $team['id'] ? 'selected' : ''; ?>>
+                                <?php echo encode_var($team['team_name']); ?>
                             </option>
                         <?php endwhile; ?>
                     </select>
                 <?php elseif (is_team_manager()): ?>
-                    <input type="hidden" name="team_id" value="<?php echo e(current_team_id()); ?>">
-                    Team ID <?php echo e(current_team_id()); ?>
+                    <input type="hidden" name="team_id" value="<?php echo encode_var(current_team_id()); ?>">
+                    Team ID <?php echo encode_var(current_team_id()); ?>
                 <?php else: ?>
-                    Team ID <?php echo e($driver['team_id']); ?>
+                    Team ID <?php echo encode_var($driver['team_id']); ?>
                 <?php endif; ?>
             </div>
 
             <div class="form-group">
                 <label>Racing number:</label>
                 <?php if ($can_edit_racing_number): ?>
-                    <input type="number" name="racing_number" min="1" value="<?php echo e($driver['racing_number']); ?>">
+                    <input type="number" name="racing_number" min="1" value="<?php echo encode_var($driver['racing_number']); ?>">
                 <?php else: ?>
-                    <?php echo e($driver['racing_number']); ?>
+                    <?php echo encode_var($driver['racing_number']); ?>
                 <?php endif; ?>
             </div>
 
             <div class="form-group">
                 <label>Date of birth:</label>
-                <input type="date" name="date_of_birth" value="<?php echo e($driver['date_of_birth']); ?>">
+                <input type="date" name="date_of_birth" value="<?php echo encode_var($driver['date_of_birth']); ?>">
             </div>
 
             <div class="form-group">
                 <label>Nationality:</label>
-                <input type="text" name="nationality" value="<?php echo e($driver['nationality']); ?>">
+                <input type="text" name="nationality" value="<?php echo encode_var($driver['nationality']); ?>">
             </div>
 
             <div class="form-group">
                 <label>Street:</label>
-                <input type="text" name="street" value="<?php echo e($driver['street']); ?>">
+                <input type="text" name="street" value="<?php echo encode_var($driver['street']); ?>">
             </div>
 
             <div class="form-group">
                 <label>City:</label>
-                <input type="text" name="city" value="<?php echo e($driver['city']); ?>">
+                <input type="text" name="city" value="<?php echo encode_var($driver['city']); ?>">
             </div>
 
             <div class="form-group">
                 <label>State:</label>
-                <input type="text" name="state" value="<?php echo e($driver['state']); ?>">
+                <input type="text" name="state" value="<?php echo encode_var($driver['state']); ?>">
             </div>
 
             <div class="form-group">
                 <label>Country:</label>
-                <input type="text" name="country" value="<?php echo e($driver['country']); ?>">
+                <input type="text" name="country" value="<?php echo encode_var($driver['country']); ?>">
             </div>
 
             <div class="form-group">
                 <label>ZIP:</label>
-                <input type="text" name="zip" value="<?php echo e($driver['zip']); ?>">
+                <input type="text" name="zip" value="<?php echo encode_var($driver['zip']); ?>">
             </div>
 
             <button type="submit">Save Driver</button>

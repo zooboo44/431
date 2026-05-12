@@ -225,32 +225,32 @@ $drivers = $db->query("SELECT drivers.id, drivers.first_name, drivers.last_name,
         <h1>Edit User</h1>
 
         <?php if (!empty($message)): ?>
-            <p style="color:green;"><?php echo e($message); ?></p>
+            <p style="color:green;"><?php echo encode_var($message); ?></p>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <form action="user_edit.php" method="POST">
-            <input type="hidden" name="id" value="<?php echo e($account['id']); ?>">
+            <input type="hidden" name="id" value="<?php echo encode_var($account['id']); ?>">
 
             <div class="form-group">
                 <label>Email:</label>
-                <input type="email" name="email" value="<?php echo e($account['email']); ?>" required>
+                <input type="email" name="email" value="<?php echo encode_var($account['email']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Username:</label>
-                <input type="text" name="username" value="<?php echo e($account['username']); ?>" required>
+                <input type="text" name="username" value="<?php echo encode_var($account['username']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Role:</label>
                 <select name="role_id">
                     <?php while ($role = $roles->fetch_assoc()): ?>
-                        <option value="<?php echo e($role['id']); ?>" <?php echo (int) $account['role_id'] === (int) $role['id'] ? 'selected' : ''; ?>>
-                            <?php echo e($role['display_name']); ?>
+                        <option value="<?php echo encode_var($role['id']); ?>" <?php echo (int) $account['role_id'] === (int) $role['id'] ? 'selected' : ''; ?>>
+                            <?php echo encode_var($role['display_name']); ?>
                         </option>
                     <?php endwhile; ?>
                 </select>
@@ -261,8 +261,8 @@ $drivers = $db->query("SELECT drivers.id, drivers.first_name, drivers.last_name,
                 <select name="team_id">
                     <option value="">None</option>
                     <?php while ($team = $teams->fetch_assoc()): ?>
-                        <option value="<?php echo e($team['id']); ?>" <?php echo (int) ($account['team_id'] ?? 0) === (int) $team['id'] ? 'selected' : ''; ?>>
-                            <?php echo e($team['team_name']); ?>
+                        <option value="<?php echo encode_var($team['id']); ?>" <?php echo (int) ($account['team_id'] ?? 0) === (int) $team['id'] ? 'selected' : ''; ?>>
+                            <?php echo encode_var($team['team_name']); ?>
                         </option>
                     <?php endwhile; ?>
                 </select>
@@ -273,8 +273,8 @@ $drivers = $db->query("SELECT drivers.id, drivers.first_name, drivers.last_name,
                 <select name="driver_id">
                     <option value="">None</option>
                     <?php while ($driver = $drivers->fetch_assoc()): ?>
-                        <option value="<?php echo e($driver['id']); ?>" <?php echo (int) ($account['driver_id'] ?? 0) === (int) $driver['id'] ? 'selected' : ''; ?>>
-                            <?php echo e($driver['team_name'] . ' - ' . $driver['first_name'] . ' ' . $driver['last_name']); ?>
+                        <option value="<?php echo encode_var($driver['id']); ?>" <?php echo (int) ($account['driver_id'] ?? 0) === (int) $driver['id'] ? 'selected' : ''; ?>>
+                            <?php echo encode_var($driver['team_name'] . ' - ' . $driver['first_name'] . ' ' . $driver['last_name']); ?>
                         </option>
                     <?php endwhile; ?>
                 </select>

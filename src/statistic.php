@@ -81,11 +81,11 @@ $can_add = is_league_director() || is_team_manager();
         <h1>Statistics</h1>
 
         <?php if (!empty($message)): ?>
-            <p style="color:green;"><?php echo e($message); ?></p>
+            <p style="color:green;"><?php echo encode_var($message); ?></p>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <?php if ($can_add): ?>
@@ -117,25 +117,25 @@ $can_add = is_league_director() || is_team_manager();
                             $can_delete = is_league_director();
                         ?>
                         <tr>
-                            <td><?php echo e($row['id']); ?></td>
-                            <td><?php echo e($row['first_name'] . ' ' . $row['last_name']); ?></td>
-                            <td><?php echo e($row['team_name']); ?></td>
-                            <td><?php echo e($row['race_name']); ?></td>
-                            <td><?php echo e($row['circuit_name']); ?></td>
-                            <td><?php echo e($row['finish_position'] ?? ''); ?></td>
-                            <td><?php echo e($row['points']); ?></td>
-                            <td><?php echo e($row['laps_completed']); ?></td>
-                            <td><?php echo e($row['pit_stops']); ?></td>
-                            <td><?php echo e($row['best_lap_time_ms'] ?? ''); ?></td>
+                            <td><?php echo encode_var($row['id']); ?></td>
+                            <td><?php echo encode_var($row['first_name'] . ' ' . $row['last_name']); ?></td>
+                            <td><?php echo encode_var($row['team_name']); ?></td>
+                            <td><?php echo encode_var($row['race_name']); ?></td>
+                            <td><?php echo encode_var($row['circuit_name']); ?></td>
+                            <td><?php echo encode_var($row['finish_position'] ?? ''); ?></td>
+                            <td><?php echo encode_var($row['points']); ?></td>
+                            <td><?php echo encode_var($row['laps_completed']); ?></td>
+                            <td><?php echo encode_var($row['pit_stops']); ?></td>
+                            <td><?php echo encode_var($row['best_lap_time_ms'] ?? ''); ?></td>
                             <td><?php echo (int) $row['dnf'] === 1 ? 'Yes' : 'No'; ?></td>
                             <td>
                                 <?php if ($can_edit): ?>
-                                    <a href="statistic_edit.php?id=<?php echo e($row['id']); ?>">Edit</a>
+                                    <a href="statistic_edit.php?id=<?php echo encode_var($row['id']); ?>">Edit</a>
                                 <?php endif; ?>
 
                                 <?php if ($can_delete): ?>
                                     <form action="statistic.php" method="POST" style="display:inline;" onsubmit="return confirm('Delete this statistic?');">
-                                        <input type="hidden" name="statistic_id" value="<?php echo e($row['id']); ?>">
+                                        <input type="hidden" name="statistic_id" value="<?php echo encode_var($row['id']); ?>">
                                         <button type="submit">Delete</button>
                                     </form>
                                 <?php endif; ?>

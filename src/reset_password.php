@@ -92,12 +92,12 @@ if ($_SERVER['REQUEST_METHOD'] === "POST" && empty($error)) {
         <h1>Reset Password</h1>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <?php if ($token !== ''): ?>
             <form action="reset_password.php" method="POST">
-                <input type="hidden" name="token" value="<?php echo e($token); ?>">
+                <input type="hidden" name="token" value="<?php echo encode_var($token); ?>">
 
                 <label>New password:</label>
                 <br>

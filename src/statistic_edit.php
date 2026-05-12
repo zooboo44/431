@@ -319,12 +319,12 @@ $races = $db->query("SELECT races.id, races.race_name, races.race_date, circuits
         <h1><?php echo $is_edit ? 'Edit Statistic' : 'Add Statistic'; ?></h1>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <form action="statistic_edit.php" method="POST">
             <?php if ($is_edit): ?>
-                <input type="hidden" name="id" value="<?php echo e($statistic_id); ?>">
+                <input type="hidden" name="id" value="<?php echo encode_var($statistic_id); ?>">
             <?php endif; ?>
 
             <div class="form-group">
@@ -332,8 +332,8 @@ $races = $db->query("SELECT races.id, races.race_name, races.race_date, circuits
                 <select name="driver_id" required>
                     <option value="">Select driver</option>
                     <?php while ($driver = $drivers->fetch_assoc()): ?>
-                        <option value="<?php echo e($driver['id']); ?>" <?php echo (int) $stat['driver_id'] === (int) $driver['id'] ? 'selected' : ''; ?>>
-                            <?php echo e($driver['team_name'] . ' - ' . $driver['first_name'] . ' ' . $driver['last_name']); ?>
+                        <option value="<?php echo encode_var($driver['id']); ?>" <?php echo (int) $stat['driver_id'] === (int) $driver['id'] ? 'selected' : ''; ?>>
+                            <?php echo encode_var($driver['team_name'] . ' - ' . $driver['first_name'] . ' ' . $driver['last_name']); ?>
                         </option>
                     <?php endwhile; ?>
                 </select>
@@ -344,8 +344,8 @@ $races = $db->query("SELECT races.id, races.race_name, races.race_date, circuits
                 <select name="race_id" required>
                     <option value="">Select race</option>
                     <?php while ($race = $races->fetch_assoc()): ?>
-                        <option value="<?php echo e($race['id']); ?>" <?php echo (int) $stat['race_id'] === (int) $race['id'] ? 'selected' : ''; ?>>
-                            <?php echo e($race['race_name'] . ' - ' . $race['race_date'] . ' - ' . $race['circuit_name']); ?>
+                        <option value="<?php echo encode_var($race['id']); ?>" <?php echo (int) $stat['race_id'] === (int) $race['id'] ? 'selected' : ''; ?>>
+                            <?php echo encode_var($race['race_name'] . ' - ' . $race['race_date'] . ' - ' . $race['circuit_name']); ?>
                         </option>
                     <?php endwhile; ?>
                 </select>
@@ -353,27 +353,27 @@ $races = $db->query("SELECT races.id, races.race_name, races.race_date, circuits
 
             <div class="form-group">
                 <label>Finish position:</label>
-                <input type="number" name="finish_position" min="1" max="99" value="<?php echo e($stat['finish_position']); ?>">
+                <input type="number" name="finish_position" min="1" max="99" value="<?php echo encode_var($stat['finish_position']); ?>">
             </div>
 
             <div class="form-group">
                 <label>Points:</label>
-                <input type="number" name="points" min="0" max="100" step="0.01" value="<?php echo e($stat['points']); ?>" required>
+                <input type="number" name="points" min="0" max="100" step="0.01" value="<?php echo encode_var($stat['points']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Laps completed:</label>
-                <input type="number" name="laps_completed" min="0" max="300" value="<?php echo e($stat['laps_completed']); ?>" required>
+                <input type="number" name="laps_completed" min="0" max="300" value="<?php echo encode_var($stat['laps_completed']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Pit stops:</label>
-                <input type="number" name="pit_stops" min="0" max="20" value="<?php echo e($stat['pit_stops']); ?>" required>
+                <input type="number" name="pit_stops" min="0" max="20" value="<?php echo encode_var($stat['pit_stops']); ?>" required>
             </div>
 
             <div class="form-group">
                 <label>Best lap time MS:</label>
-                <input type="number" name="best_lap_time_ms" min="1" max="600000" value="<?php echo e($stat['best_lap_time_ms']); ?>">
+                <input type="number" name="best_lap_time_ms" min="1" max="600000" value="<?php echo encode_var($stat['best_lap_time_ms']); ?>">
             </div>
 
             <div class="form-group">

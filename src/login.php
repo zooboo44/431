@@ -99,11 +99,11 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
         <h1 style="text-align:left;">Login</h1>
 
         <?php if (!empty($success)): ?>
-            <p style="color:green;"><?php echo e($success); ?></p>
+            <p style="color:green;"><?php echo encode_var($success); ?></p>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <form action="login.php" method="POST">

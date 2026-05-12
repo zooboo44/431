@@ -87,11 +87,11 @@ $result = $db->query("SELECT races.id, races.race_name, races.race_date, races.s
         <h1>Races</h1>
 
         <?php if (!empty($message)): ?>
-            <p style="color:green;"><?php echo e($message); ?></p>
+            <p style="color:green;"><?php echo encode_var($message); ?></p>
         <?php endif; ?>
 
         <?php if (!empty($error)): ?>
-            <p style="color:red;"><?php echo e($error); ?></p>
+            <p style="color:red;"><?php echo encode_var($error); ?></p>
         <?php endif; ?>
 
         <?php if ($can_manage): ?>
@@ -116,17 +116,17 @@ $result = $db->query("SELECT races.id, races.race_name, races.race_date, races.s
                 <?php if ($result && $result->num_rows > 0): ?>
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
-                            <td><?php echo e($row['race_name']); ?></td>
-                            <td><?php echo e($row['race_date']); ?></td>
-                            <td><?php echo e($row['scheduled_laps']); ?></td>
-                            <td><?php echo e($row['circuit_name']); ?></td>
-                            <td><?php echo e($row['location']); ?></td>
-                            <td><?php echo e($row['country']); ?></td>
+                            <td><?php echo encode_var($row['race_name']); ?></td>
+                            <td><?php echo encode_var($row['race_date']); ?></td>
+                            <td><?php echo encode_var($row['scheduled_laps']); ?></td>
+                            <td><?php echo encode_var($row['circuit_name']); ?></td>
+                            <td><?php echo encode_var($row['location']); ?></td>
+                            <td><?php echo encode_var($row['country']); ?></td>
                             <?php if ($can_manage): ?>
                                 <td>
-                                    <a href="race_edit.php?id=<?php echo e($row['id']); ?>">Edit</a>
+                                    <a href="race_edit.php?id=<?php echo encode_var($row['id']); ?>">Edit</a>
                                     <form action="races.php" method="POST" style="display:inline;" onsubmit="return confirm('Delete this race?');">
-                                        <input type="hidden" name="race_id" value="<?php echo e($row['id']); ?>">
+                                        <input type="hidden" name="race_id" value="<?php echo encode_var($row['id']); ?>">
                                         <button type="submit">Delete</button>
                                     </form>
                                 </td>

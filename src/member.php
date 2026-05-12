@@ -80,9 +80,9 @@ $recent_statistics = $db->query("SELECT drivers.first_name, drivers.last_name, r
         <h1>F1 Statistics Dashboard</h1>
 
         <p>
-            Logged in as <?php echo e($_SESSION['username'] ?? ''); ?>
-            / <?php echo e($_SESSION['email'] ?? ''); ?>
-            (<?php echo e($_SESSION['role_display_name'] ?? ''); ?>)
+            Logged in as <?php echo encode_var($_SESSION['username'] ?? ''); ?>
+            / <?php echo encode_var($_SESSION['email'] ?? ''); ?>
+            (<?php echo encode_var($_SESSION['role_display_name'] ?? ''); ?>)
         </p>
 
         <nav>
@@ -100,12 +100,12 @@ $recent_statistics = $db->query("SELECT drivers.first_name, drivers.last_name, r
 
         <h2>Overview</h2>
         <div class="counts">
-            <div class="count-box"><strong><?php echo e($counts['users']); ?></strong>Users</div>
-            <div class="count-box"><strong><?php echo e($counts['teams']); ?></strong>Teams</div>
-            <div class="count-box"><strong><?php echo e($counts['drivers']); ?></strong>Drivers</div>
-            <div class="count-box"><strong><?php echo e($counts['circuits']); ?></strong>Circuits</div>
-            <div class="count-box"><strong><?php echo e($counts['races']); ?></strong>Races</div>
-            <div class="count-box"><strong><?php echo e($counts['statistics']); ?></strong>Statistics Records</div>
+            <div class="count-box"><strong><?php echo encode_var($counts['users']); ?></strong>Users</div>
+            <div class="count-box"><strong><?php echo encode_var($counts['teams']); ?></strong>Teams</div>
+            <div class="count-box"><strong><?php echo encode_var($counts['drivers']); ?></strong>Drivers</div>
+            <div class="count-box"><strong><?php echo encode_var($counts['circuits']); ?></strong>Circuits</div>
+            <div class="count-box"><strong><?php echo encode_var($counts['races']); ?></strong>Races</div>
+            <div class="count-box"><strong><?php echo encode_var($counts['statistics']); ?></strong>Statistics Records</div>
         </div>
 
         <?php if ($is_director): ?>
@@ -115,9 +115,9 @@ $recent_statistics = $db->query("SELECT drivers.first_name, drivers.last_name, r
                 <?php if ($recent_users && $recent_users->num_rows > 0): ?>
                     <?php while ($user = $recent_users->fetch_assoc()): ?>
                         <tr>
-                            <td><?php echo e($user['username']); ?></td>
-                            <td><?php echo e($user['email']); ?></td>
-                            <td><?php echo e($user['role_name']); ?></td>
+                            <td><?php echo encode_var($user['username']); ?></td>
+                            <td><?php echo encode_var($user['email']); ?></td>
+                            <td><?php echo encode_var($user['role_name']); ?></td>
                         </tr>
                     <?php endwhile; ?>
                 <?php else: ?>
@@ -132,8 +132,8 @@ $recent_statistics = $db->query("SELECT drivers.first_name, drivers.last_name, r
             <?php if ($teams && $teams->num_rows > 0): ?>
                 <?php while ($team = $teams->fetch_assoc()): ?>
                     <tr>
-                        <td><?php echo e($team['team_name']); ?></td>
-                        <td><?php echo e($team['base_location']); ?></td>
+                        <td><?php echo encode_var($team['team_name']); ?></td>
+                        <td><?php echo encode_var($team['base_location']); ?></td>
                     </tr>
                 <?php endwhile; ?>
             <?php else: ?>
@@ -147,8 +147,8 @@ $recent_statistics = $db->query("SELECT drivers.first_name, drivers.last_name, r
             <?php if ($recent_drivers && $recent_drivers->num_rows > 0): ?>
                 <?php while ($driver = $recent_drivers->fetch_assoc()): ?>
                     <tr>
-                        <td><?php echo e($driver['first_name'] . ' ' . $driver['last_name']); ?></td>
-                        <td><?php echo e($driver['team_name']); ?></td>
+                        <td><?php echo encode_var($driver['first_name'] . ' ' . $driver['last_name']); ?></td>
+                        <td><?php echo encode_var($driver['team_name']); ?></td>
                     </tr>
                 <?php endwhile; ?>
             <?php else: ?>
@@ -162,9 +162,9 @@ $recent_statistics = $db->query("SELECT drivers.first_name, drivers.last_name, r
             <?php if ($recent_races && $recent_races->num_rows > 0): ?>
                 <?php while ($race = $recent_races->fetch_assoc()): ?>
                     <tr>
-                        <td><?php echo e($race['race_name']); ?></td>
-                        <td><?php echo e($race['race_date']); ?></td>
-                        <td><?php echo e($race['circuit_name']); ?></td>
+                        <td><?php echo encode_var($race['race_name']); ?></td>
+                        <td><?php echo encode_var($race['race_date']); ?></td>
+                        <td><?php echo encode_var($race['circuit_name']); ?></td>
                     </tr>
                 <?php endwhile; ?>
             <?php else: ?>
@@ -178,10 +178,10 @@ $recent_statistics = $db->query("SELECT drivers.first_name, drivers.last_name, r
             <?php if ($recent_statistics && $recent_statistics->num_rows > 0): ?>
                 <?php while ($stat = $recent_statistics->fetch_assoc()): ?>
                     <tr>
-                        <td><?php echo e($stat['first_name'] . ' ' . $stat['last_name']); ?></td>
-                        <td><?php echo e($stat['race_name']); ?></td>
-                        <td><?php echo e($stat['finish_position'] ?? ''); ?></td>
-                        <td><?php echo e($stat['points']); ?></td>
+                        <td><?php echo encode_var($stat['first_name'] . ' ' . $stat['last_name']); ?></td>
+                        <td><?php echo encode_var($stat['race_name']); ?></td>
+                        <td><?php echo encode_var($stat['finish_position'] ?? ''); ?></td>
+                        <td><?php echo encode_var($stat['points']); ?></td>
                     </tr>
                 <?php endwhile; ?>
             <?php else: ?>
